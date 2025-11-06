@@ -118,6 +118,7 @@ const DEFAULT_TICKER_POLL_MS = 3000;
 const DEFAULT_KLINE_POLL_MS = 15000;
 const WS_HEARTBEAT_INTERVAL_MS = 5_000;
 const WS_STALE_TIMEOUT_MS = 20_000;
+const POSITION_EPSILON = 1e-12;
 
 const RESOLUTION_MS: Record<string, number> = {
   "1m": 60_000,
@@ -127,6 +128,8 @@ const RESOLUTION_MS: Record<string, number> = {
   "4h": 14_400_000,
   "1d": 86_400_000,
 };
+
+const TERMINAL_ORDER_STATUSES = new Set(["filled", "canceled", "cancelled", "expired"]);
 
 export interface LighterGatewayOptions {
   symbol: string; // display symbol used by strategy logging
@@ -418,6 +421,14 @@ export class LighterGateway {
       }
       if (details) {
         this.accountDetails = details;
+        if (Object.prototype.hasOwnProperty.call(details, "positions")) {
+          const initialPositions = this.normalizePositions(details.positions);
+          if (initialPositions.length) {
+            this.replacePositions(initialPositions);
+          } else if (this.isEmptyPositionsPayload(details.positions)) {
+            this.positions = [];
+          }
+        }
         this.emitAccount();
       } else {
         // Fallback: emit an empty account snapshot so strategies can proceed
@@ -657,77 +668,225 @@ export class LighterGateway {
 
   private handleAccountAll(message: any): void {
     if (!message) return;
-    // account_all may be partial; merge provided markets into existing positions
     if (Object.prototype.hasOwnProperty.call(message, "positions")) {
       const positionsObject = message.positions ?? {};
-      const incoming: LighterPosition[] = (Array.isArray(positionsObject)
-        ? (positionsObject as LighterPosition[])
-        : (Object.values(positionsObject) as LighterPosition[])) as LighterPosition[];
-
-      const byMarket = new Map<number, LighterPosition>();
-      for (const p of this.positions ?? []) {
-        const mid = Number(p.market_id);
-        if (Number.isFinite(mid)) byMarket.set(mid, p);
+      const incoming = this.normalizePositions(positionsObject);
+      if (!incoming.length && this.isEmptyPositionsPayload(positionsObject)) {
+        this.positions = [];
+      } else if (incoming.length) {
+        this.mergePositions(incoming);
       }
-      for (const p of incoming) {
-        const mid = Number(p.market_id);
-        if (!Number.isFinite(mid)) continue;
-        const sign = Number(p.sign ?? 0);
-        const size = Number(p.position ?? 0);
-        if (sign === 0 || Math.abs(size) < 1e-12) {
-          byMarket.delete(mid);
-        } else {
-          byMarket.set(mid, p);
-        }
-      }
-      this.positions = Array.from(byMarket.values());
     }
     this.emitAccount();
   }
 
   private handleAccountMarket(message: any): void {
     if (!message) return;
+    const type = typeof message.type === "string" ? message.type : "";
     const position: LighterPosition | undefined = message.position as LighterPosition | undefined;
-    if (!position || !Number.isFinite(Number(position.market_id))) return;
-    const marketId = Number(position.market_id);
-    const sign = Number(position.sign ?? 0);
-    const size = Number(position.position ?? 0);
-    const shouldRemove = sign === 0 || Math.abs(size) < 1e-12;
-    if (shouldRemove) {
-      this.positions = (this.positions ?? []).filter((p) => Number(p.market_id) !== marketId);
-    } else {
-      let updated = false;
-      this.positions = (this.positions ?? []).map((p) => {
-        if (Number(p.market_id) === marketId) {
-          updated = true;
-          return position;
-        }
-        return p;
-      });
-      if (!updated) this.positions.push(position);
+    const channelMarketId = this.extractMarketIdFromChannel(message.channel);
+    if (position && Number.isFinite(Number(position.market_id))) {
+      this.mergePositions([position]);
+    } else if (type === "subscribed/account_market" && channelMarketId != null) {
+      this.removePositionsForMarkets([channelMarketId]);
+    }
+    if (Array.isArray(message.orders) && message.orders.length) {
+      const marketId = Number(position?.market_id ?? channelMarketId ?? this.marketId ?? NaN);
+      this.applyOrderList(message.orders, Number.isFinite(marketId) ? Number(marketId) : null, type === "subscribed/account_market");
+    } else if (type === "subscribed/account_market" && channelMarketId != null) {
+      this.clearOrdersForMarket(channelMarketId);
+      this.emitOrders();
     }
     this.emitAccount();
   }
 
   private handleAccountOrders(message: any): void {
     if (!message) return;
+    const snapshot = message.type === "subscribed/account_all_orders";
     const ordersObject = message.orders ?? {};
-    const buckets = Object.values(ordersObject) as unknown[];
-    const allOrders: LighterOrder[] = buckets.flatMap((entry) => Array.isArray(entry) ? (entry as LighterOrder[]) : []);
-    const terminalStatuses = new Set(["filled", "canceled", "cancelled", "expired"]);
-    for (const order of allOrders) {
-      const key = String(order.order_index ?? order.order_id ?? order.client_order_index ?? "");
-      const status = (order.status ?? "").toLowerCase();
-      if (!key) continue;
-      if (terminalStatuses.has(status)) {
-        this.orderMap.delete(key);
+    this.applyOrderBuckets(ordersObject, snapshot);
+  }
+
+  private normalizePositions(source: unknown): LighterPosition[] {
+    if (!source) return [];
+    if (Array.isArray(source)) {
+      return source.filter((entry): entry is LighterPosition => this.isPosition(entry));
+    }
+    if (isPlainObject(source)) {
+      return Object.values(source).filter((entry): entry is LighterPosition => this.isPosition(entry));
+    }
+    if (this.isPosition(source)) return [source];
+    return [];
+  }
+
+  private isPosition(value: unknown): value is LighterPosition {
+    return typeof value === "object" && value != null && Number.isFinite(Number((value as LighterPosition).market_id));
+  }
+
+  private mergePositions(updates: LighterPosition[]): void {
+    if (!updates.length) return;
+    const byMarket = new Map<number, LighterPosition>();
+    for (const existing of this.positions ?? []) {
+      const mid = Number(existing.market_id);
+      if (Number.isFinite(mid)) {
+        byMarket.set(mid, existing);
+      }
+    }
+    for (const update of updates) {
+      const marketId = Number(update.market_id);
+      if (!Number.isFinite(marketId)) continue;
+      if (this.shouldRemovePosition(update)) {
+        byMarket.delete(marketId);
       } else {
-        this.orderMap.set(key, order);
+        byMarket.set(marketId, update);
+      }
+    }
+    this.positions = Array.from(byMarket.values());
+  }
+
+  private replacePositions(positions: LighterPosition[]): void {
+    if (!positions.length) {
+      this.positions = [];
+      return;
+    }
+    const filtered = this.filterPositions(positions);
+    this.positions = filtered;
+  }
+
+  private filterPositions(positions: LighterPosition[]): LighterPosition[] {
+    const byMarket = new Map<number, LighterPosition>();
+    for (const entry of positions) {
+      const marketId = Number(entry.market_id);
+      if (!Number.isFinite(marketId)) continue;
+      if (this.shouldRemovePosition(entry)) {
+        byMarket.delete(marketId);
+      } else {
+        byMarket.set(marketId, entry);
+      }
+    }
+    return Array.from(byMarket.values());
+  }
+
+  private shouldRemovePosition(position: LighterPosition): boolean {
+    const size = Number(position.position ?? 0);
+    return !Number.isFinite(size) || Math.abs(size) < POSITION_EPSILON;
+  }
+
+  private removePositionsForMarkets(markets: number[]): void {
+    if (!markets.length) return;
+    const targets = new Set(markets.filter((value) => Number.isFinite(value)).map((value) => Number(value)));
+    if (!targets.size) return;
+    this.positions = (this.positions ?? []).filter((position) => !targets.has(Number(position.market_id)));
+  }
+
+  private applyOrderBuckets(rawOrders: unknown, snapshot: boolean): void {
+    const ordersObject = isPlainObject(rawOrders) ? (rawOrders as Record<string, unknown>) : {};
+    const marketKeys = Object.keys(ordersObject);
+    if (snapshot && marketKeys.length === 0) {
+      this.orderMap.clear();
+      this.orders = [];
+      this.emitOrders();
+      return;
+    }
+    if (snapshot) {
+      this.orderMap.clear();
+    }
+    for (const [market, bucket] of Object.entries(ordersObject)) {
+      const marketId = Number(market);
+      const normalized = this.normalizeOrders(bucket);
+      if (Number.isFinite(marketId)) {
+        this.clearOrdersForMarket(marketId);
+      }
+      if (!normalized.length) continue;
+      for (const order of normalized) {
+        this.applyOrderUpdate(order);
       }
     }
     this.orders = Array.from(this.orderMap.values());
-    const mapped = toOrders(this.displaySymbol, this.orders);
-    this.ordersEvent.emit(mapped);
+    this.emitOrders();
+  }
+
+  private normalizeOrders(source: unknown): LighterOrder[] {
+    if (!source) return [];
+    if (Array.isArray(source)) {
+      return (source as unknown[]).filter((entry): entry is LighterOrder => this.isOrder(entry));
+    }
+    if (isPlainObject(source) && this.isOrder(source)) {
+      return [source];
+    }
+    return [];
+  }
+
+  private isOrder(value: unknown): value is LighterOrder {
+    return typeof value === "object" && value != null;
+  }
+
+  private applyOrderList(rawOrders: unknown, marketId: number | null, snapshot: boolean): void {
+    const orders = this.normalizeOrders(rawOrders);
+    if (marketId != null) {
+      this.clearOrdersForMarket(marketId);
+    } else if (snapshot) {
+      this.orderMap.clear();
+    }
+    for (const order of orders) {
+      this.applyOrderUpdate(order);
+    }
+    this.orders = Array.from(this.orderMap.values());
+    this.emitOrders();
+  }
+
+  private applyOrderUpdate(order: LighterOrder): void {
+    const key = String(order.order_index ?? order.order_id ?? order.client_order_index ?? "");
+    if (!key) return;
+    const status = (order.status ?? "").toLowerCase();
+    if (TERMINAL_ORDER_STATUSES.has(status)) {
+      this.orderMap.delete(key);
+      return;
+    }
+    if (order.client_order_index != null || order.order_index != null) {
+      for (const [existingKey, existingOrder] of Array.from(this.orderMap.entries())) {
+        if (existingKey === key) continue;
+        const sameOrderIndex =
+          order.order_index != null &&
+          existingOrder.order_index != null &&
+          Number(existingOrder.order_index) === Number(order.order_index);
+        const sameClientIndex =
+          order.client_order_index != null &&
+          existingOrder.client_order_index != null &&
+          Number(existingOrder.client_order_index) === Number(order.client_order_index);
+        if (sameOrderIndex || sameClientIndex) {
+          this.orderMap.delete(existingKey);
+        }
+      }
+    }
+    this.orderMap.set(key, order);
+  }
+
+  private clearOrdersForMarket(marketId: number): void {
+    const normalized = Number(marketId);
+    if (!Number.isFinite(normalized)) return;
+    for (const [key, existing] of Array.from(this.orderMap.entries())) {
+      if (Number(existing.market_index) === normalized) {
+        this.orderMap.delete(key);
+      }
+    }
+  }
+
+  private extractMarketIdFromChannel(channel: unknown): number | null {
+    if (typeof channel !== "string") return null;
+    const match = channel.match(/account_market:(\d+)/);
+    if (match && match[1]) {
+      const value = Number(match[1]);
+      return Number.isFinite(value) ? value : null;
+    }
+    return null;
+  }
+
+  private isEmptyPositionsPayload(value: unknown): boolean {
+    if (value == null) return true;
+    if (Array.isArray(value)) return value.length === 0;
+    if (isPlainObject(value)) return Object.keys(value).length === 0;
+    return false;
   }
 
   private emitDepth(): void {
@@ -1049,4 +1208,8 @@ function decimalsToStep(decimals: number): number {
   }
   const step = Number(`1e-${decimals}`);
   return Number.isFinite(step) ? step : Math.pow(10, -decimals);
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value != null && !Array.isArray(value);
 }
