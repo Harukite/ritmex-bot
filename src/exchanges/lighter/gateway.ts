@@ -687,8 +687,6 @@ export class LighterGateway {
     const channelMarketId = this.extractMarketIdFromChannel(message.channel);
     if (position && Number.isFinite(Number(position.market_id))) {
       this.mergePositions([position]);
-    } else if (type === "subscribed/account_market" && channelMarketId != null) {
-      this.removePositionsForMarkets([channelMarketId]);
     }
     if (Array.isArray(message.orders) && message.orders.length) {
       const marketId = Number(position?.market_id ?? channelMarketId ?? this.marketId ?? NaN);
@@ -823,10 +821,12 @@ export class LighterGateway {
 
   private applyOrderList(rawOrders: unknown, marketId: number | null, snapshot: boolean): void {
     const orders = this.normalizeOrders(rawOrders);
-    if (marketId != null) {
-      this.clearOrdersForMarket(marketId);
-    } else if (snapshot) {
-      this.orderMap.clear();
+    if (snapshot) {
+      if (marketId != null) {
+        this.clearOrdersForMarket(marketId);
+      } else {
+        this.orderMap.clear();
+      }
     }
     for (const order of orders) {
       this.applyOrderUpdate(order);
