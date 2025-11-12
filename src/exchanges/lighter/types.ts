@@ -29,8 +29,8 @@ export interface LighterOrder {
   time_in_force?: string;
   trigger_price?: string;
   reduce_only?: boolean;
-  status?: string;
-  trigger_status?: string;
+  status?: string | number;
+  trigger_status?: string | number;
   trigger_time?: number;
   updated_at?: number;
   created_at?: number;

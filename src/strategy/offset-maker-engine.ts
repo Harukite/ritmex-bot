@@ -546,7 +546,10 @@ export class OffsetMakerEngine {
           this.lastEntryOrderBySide[target.side] = { price: target.price, ts: Date.now() };
         }
       } catch (error) {
-        this.tradeLog.push("error", `挂单失败(${target.side} ${target.price}): ${String(error)}`);
+        const dustClosed = await this.tryDustMarketClose(target, error);
+        if (!dustClosed) {
+          this.tradeLog.push("error", `挂单失败(${target.side} ${target.price}): ${String(error)}`);
+        }
       }
     }
   }
@@ -712,5 +715,53 @@ export class OffsetMakerEngine {
 
   private getReferencePrice(): number | null {
     return getMidOrLast(this.depthSnapshot, this.tickerSnapshot);
+  }
+
+  private isInvalidAmountError(error: unknown): boolean {
+    const message =
+      typeof error === "string"
+        ? error
+        : error instanceof Error
+          ? error.message
+          : JSON.stringify(error);
+    if (!message) return false;
+    if (message.includes("\"code\":21706")) return true;
+    return message.toLowerCase().includes("invalid order base or quote amount");
+  }
+
+  private async tryDustMarketClose(target: DesiredOrder, error: unknown): Promise<boolean> {
+    if (!target.reduceOnly) return false;
+    if (!this.isInvalidAmountError(error)) return false;
+    const position = getPosition(this.accountSnapshot, this.config.symbol);
+    const absQty = Math.abs(target.amount);
+    if (absQty < EPS) return false;
+    const { topBid, topAsk } = getTopPrices(this.depthSnapshot);
+    try {
+      await marketClose(
+        this.exchange,
+        this.config.symbol,
+        this.openOrders,
+        this.locks,
+        this.timers,
+        this.pending,
+        target.side,
+        absQty,
+        (type, detail) => this.tradeLog.push(type, detail),
+        {
+          markPrice: position.markPrice,
+          expectedPrice:
+            target.side === "SELL"
+              ? (topBid != null ? Number(topBid) : null)
+              : (topAsk != null ? Number(topAsk) : null),
+          maxPct: this.config.maxCloseSlippagePct,
+        },
+        { qtyStep: this.qtyStep }
+      );
+      this.tradeLog.push("order", `小额仓位使用市价平仓 ${target.side} 数量 ${absQty.toFixed(6)}`);
+      return true;
+    } catch (closeError) {
+      this.tradeLog.push("error", `小额市价平仓失败: ${String(closeError)}`);
+      return false;
+    }
   }
 }

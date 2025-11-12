@@ -133,7 +133,7 @@ const RESOLUTION_MS: Record<string, number> = {
   "1d": 86_400_000,
 };
 
-const TERMINAL_ORDER_STATUSES = new Set(["filled", "canceled", "cancelled", "expired"]);
+const TERMINAL_ORDER_STATUSES = new Set(["filled", "canceled", "cancelled", "expired", "canceled-post-only"]);
 
 export interface LighterGatewayOptions {
   symbol: string; // display symbol used by strategy logging
