@@ -84,6 +84,7 @@ export class OffsetMakerEngine {
   private lastSpotWallet = 0;
   private spotKlineUp: boolean | null = null;
   private lastSpotBuyGuardLogged = false;
+  private lastSpotStopSkipped = false;
 
   private timer: ReturnType<typeof setInterval> | null = null;
   private processing = false;
@@ -774,7 +775,19 @@ export class OffsetMakerEngine {
     // For spot: use balance-derived size; if loss exceeds threshold, market sell to exit.
     if (this.marketType === "spot") {
       const absPosition = Math.abs(position.positionAmt);
-      if (absPosition < EPS) return;
+      if (absPosition < EPS) {
+        this.lastSpotStopSkipped = false;
+        return;
+      }
+      const minStopQty = Number.isFinite(this.minBaseAmount) ? this.minBaseAmount! : null;
+      if (minStopQty != null && minStopQty > 0 && absPosition + EPS < minStopQty) {
+        if (!this.lastSpotStopSkipped) {
+          this.tradeLog.push("info", "现货持仓低于最小平仓数量，跳过止损检查");
+          this.lastSpotStopSkipped = true;
+        }
+        return;
+      }
+      this.lastSpotStopSkipped = false;
       const pnl = computePositionPnl(position, bidPrice, askPrice);
       const triggerStop = shouldStopLoss(position, bidPrice, askPrice, this.config.lossLimit);
       if (!triggerStop) return;
