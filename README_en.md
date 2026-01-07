@@ -1,6 +1,10 @@
 # ritmex-bot
 
+**Language Setting**: Set `LANG=en` in your `.env` file to display the CLI interface in English.
+
 A Bun-powered multi-exchange perpetuals workstation that ships an SMA30 trend engine, a Guardian stop sentinel, and two market-making modes. It offers instant restarts, realtime market data, structured logging, and an Ink-based CLI dashboard.
+
+If you'd like to support this project and get fee discounts, please consider using these referral links:
 
 * [Lighter referral link](https://app.lighter.xyz/?referral=111909FA)
 * [Aster referral link](https://www.asterdex.com/en/referral/4665f3)
@@ -11,11 +15,11 @@ A Bun-powered multi-exchange perpetuals workstation that ships an SMA30 trend en
 * [Backpack referral link](https://backpack.exchange/join/ritmex)
 * [edgex referral link](https://pro.edgex.exchange/referral/BULL)
 * [Paradex referral link](https://paradex.io/ref/xingxingjun)
-* [Apex referral link](https://join.omni.apex.exchange/RITHMEX)
+* [Apex referral link](https://join.omni.apex.exchange/SEA)
 
 ## Documentation Map
-- [中文 README](README.md)
 - [Beginner-friendly Quick Start](simple-readme.md)
+- [Grid Trading Strategy Guide](grid-trading.md)
 
 ## Highlights
 - **Live data & risk sync** via websockets with REST fallbacks and full reconciliation on restart.
@@ -35,7 +39,7 @@ A Bun-powered multi-exchange perpetuals workstation that ships an SMA30 trend en
 | Paradex | StarkEx perpetuals | `PARADEX_PRIVATE_KEY`, `PARADEX_WALLET_ADDRESS` | Toggle `PARADEX_SANDBOX=true` for the testnet |
 
 ## Requirements
-- Bun ≥ 1.2 (both `bun` and `bunx` on PATH)
+- Bun >= 1.2 (both `bun` and `bunx` on PATH)
 - macOS, Linux, or Windows via WSL (native Windows works but WSL is recommended)
 - Node.js is optional unless your tooling requires it
 
@@ -96,6 +100,7 @@ The script installs Bun, project dependencies, collects Aster API credentials, g
 > ```
 
 ## Exchange Setup Guides
+
 ### Aster
 1. Keep `EXCHANGE=aster` (default value).
 2. Supply `ASTER_API_KEY` and `ASTER_API_SECRET`.
@@ -103,11 +108,24 @@ The script installs Bun, project dependencies, collects Aster API credentials, g
 4. The bootstrap script auto-populates these variables; manual installs must maintain them.
 
 ### StandX
+
+* [StandX Maker Points Strategy Guide](docs/standx/maker-points-guide.md)
+
+The strategy requires a StandX login token to place orders.
+
+How to obtain the token:
+1. Open https://standx.ritmex.one/
+2. Connect your wallet
+3. Click "Login"
+4. Export your login credentials, which will include the token (`STANDX_TOKEN`) and proxy wallet private key (`STANDX_REQUEST_PRIVATE_KEY`). The proxy wallet is only used for trade signatures, keeping your main wallet secure.
+
+Please keep these credentials safe and do not share them with anyone.
+
 1. Set `EXCHANGE=standx`.
 2. Provide `STANDX_TOKEN` (JWT token for perps API).
-3. Set `STANDX_SYMBOL` (defaults to `BTC-USD`) and align `PRICE_TICK` / `QTY_STEP`.
-4. Optional: `STANDX_BASE_URL`, `STANDX_WS_URL`, or `STANDX_SESSION_ID` for custom endpoints.
-5. Optional: `STANDX_REQUEST_PRIVATE_KEY` if the API requires body signatures.
+3. Provide `STANDX_REQUEST_PRIVATE_KEY` (proxy wallet private key).
+4. Set `STANDX_SYMBOL` (defaults to `BTC-USD`) and align `PRICE_TICK` / `QTY_STEP`.
+5. Optional: `STANDX_BASE_URL`, `STANDX_WS_URL`, or `STANDX_SESSION_ID` for custom endpoints.
 
 ### GRVT
 1. Set `EXCHANGE=grvt` inside `.env`.
@@ -117,25 +135,25 @@ The script installs Bun, project dependencies, collects Aster API credentials, g
 
 ### Lighter
 1. Set `EXCHANGE=lighter`.
-2. Provide `LIGHTER_ACCOUNT_INDEX` and `LIGHTER_API_PRIVATE_KEY` (40-byte hex private key).
+2. Provide `LIGHTER_ACCOUNT_INDEX` and `LIGHTER_API_PRIVATE_KEY` (40-byte hex private key). `LIGHTER_ACCOUNT_INDEX` is your account index, which you can find by opening DevTools (F12) on the official website and observing API requests. `LIGHTER_API_PRIVATE_KEY` is your API private key.
 3. Switch `LIGHTER_ENV` to `mainnet`, `staging`, or `dev` when necessary; override `LIGHTER_BASE_URL` if endpoints differ.
 4. `LIGHTER_SYMBOL` defaults to `BTCUSDT`; override price/size decimals when markets differ.
 
 ### Backpack
 1. Set `EXCHANGE=backpack`.
-2. Populate `BACKPACK_API_KEY`, `BACKPACK_API_SECRET`, and `BACKPACK_PASSWORD`; add `BACKPACK_SUBACCOUNT` if you trade from a subaccount.
+2. Populate `BACKPACK_API_KEY`, `BACKPACK_API_SECRET`, and `BACKPACK_PASSWORD`; add `BACKPACK_SUBACCOUNT` if you trade from a subaccount (defaults to main account ID).
 3. Toggle `BACKPACK_SANDBOX=true` for the sandbox environment and verify `BACKPACK_SYMBOL` matches the contract (defaults to `BTC_USD_PERP`).
 4. Enable `BACKPACK_DEBUG=true` for verbose adapter logging.
 
 ### Paradex
 1. Set `EXCHANGE=paradex`.
-2. Provide `PARADEX_PRIVATE_KEY` (EVM private key) and `PARADEX_WALLET_ADDRESS`.
+2. Provide `PARADEX_PRIVATE_KEY` (EVM private key) and `PARADEX_WALLET_ADDRESS`. Note: These are your EVM wallet address and private key. It is recommended to create a brand new wallet and avoid storing unrelated assets in it.
 3. The adapter connects to mainnet by default; enable `PARADEX_SANDBOX=true` and adjust `PARADEX_SYMBOL` for testnet usage.
 4. Advanced tuning: use `PARADEX_USE_PRO`, `PARADEX_RECONNECT_DELAY_MS`, or debug flags as needed.
 
 ### Nado
 1. Set `EXCHANGE=nado`.
-2. On the Nado web app, open DevTools → switch to the `Application` tab → `Local Storage`, locate `nado.userSettings`, then grab the `privateKey` field from its JSON value and paste it into `.env` as `NADO_SIGNER_PRIVATE_KEY`.
+2. On the Nado web app (trading interface), open DevTools (F12) -> switch to the `Application` tab -> `Local Storage`, locate `nado.userSettings`, then grab the `privateKey` field from its JSON value and paste it into `.env` as `NADO_SIGNER_PRIVATE_KEY`.
 3. Provide `NADO_SUBACCOUNT_OWNER` (or `NADO_EVM_ADDRESS`).
 4. Select network via `NADO_ENV=inkMainnet` (mainnet) or `inkTestnet` (testnet).
 5. Set `NADO_SYMBOL` using Nado product symbols like `BTC-PERP` (it also accepts `BTCUSDT0` and maps it to `BTC-PERP`).
@@ -187,7 +205,7 @@ bun x vitest --watch
 ```
 
 ## Troubleshooting
-- Keep at least 50–100 USDT in the account before deploying a live strategy.
+- Keep at least 50-100 USDT in the account before deploying a live strategy.
 - Configure leverage on the exchange manually (~50x is recommended); the bot will not change it.
 - Ensure your server or workstation clock is in sync to avoid signature errors.
 - Accounts must run in one-way position mode.
