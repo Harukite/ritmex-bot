@@ -1,112 +1,252 @@
-# StandX 做市积分策略使用教程（新手版）
+# StandX 做市积分策略使用教程（超详细新手版）
 
-本教程用于帮助你快速上手 StandX 做市积分策略（Maker Points）。无需交易经验，照着步骤做即可。
+本教程会 **手把手** 教你如何运行 StandX 做市积分策略。每一步都有详细说明，按顺序操作即可。
 
 ---
 
-## 1. 准备工作
+## 第一步：安装 Bun（运行环境）
 
-### 1.1 安装 Bun
-本项目使用 Bun 运行。
+本项目需要 Bun 才能运行。
 
-如果你还没有安装 Bun，请先参考官方文档完成安装：
-- https://bun.sh/
-
-安装完成后，进入项目目录执行：
+### macOS / Linux 用户：
+打开终端，复制粘贴以下命令后按回车：
 ```bash
+curl -fsSL https://bun.sh/install | bash
+```
+
+### Windows 用户：
+打开 PowerShell，复制粘贴以下命令后按回车：
+```powershell
+powershell -c "irm bun.sh/install.ps1 | iex"
+```
+
+安装完成后，**关闭终端，重新打开一个新的终端窗口**，然后输入：
+```bash
+bun -v
+```
+如果显示版本号（如 `1.2.x`），说明安装成功。
+
+---
+
+## 第二步：下载项目并安装依赖
+
+```bash
+git clone https://github.com/discountry/ritmex-bot.git
+cd ritmex-bot
 bun install
 ```
 
-### 1.2 获取 StandX 登录凭证（Token）
-策略需要 StandX 的登录 token 才能下单。
+---
 
-获取方式：
-1. 打开 https://standx.ritmex.one/
-2. 连接钱包
-3. 点击“登录”
-4. 导出登录信息（里面会包含 TOKEN 以及生成的代理钱包私钥）
+## 第三步：获取 StandX 登录凭证（最重要的一步）
 
-请妥善保存，不要分享给他人。
+> ⚠️ **这一步是 90% 新手卡住的地方，请仔细阅读！**
+>
+> ⚠️ **这一步是 90% 新手卡住的地方，请仔细阅读！**
+>
+> ⚠️ **这一步是 90% 新手卡住的地方，请仔细阅读！**
+
+策略需要两样东西才能帮你下单：
+1. **TOKEN**（登录令牌）
+2. **代理钱包私钥**（用于签名交易）
+
+### 获取步骤（图文说明）：
+
+#### 3.1 打开专用登录页面
+
+在浏览器打开这个网址：
+```
+https://standx.ritmex.one/
+```
+
+> **注意：不是 standx.com！是 standx.ritmex.one！**
+>
+> **注意：不是 standx.com！是 standx.ritmex.one！**
+>
+> **注意：不是 standx.com！是 standx.ritmex.one！**
+
+#### 3.2 连接你的钱包
+
+点击页面上的 **"连接钱包"** 按钮，使用 MetaMask 或其他钱包连接。
+
+#### 3.3 点击登录
+
+连接钱包后，点击 **"登录"** 按钮。钱包会弹出签名请求，确认签名。
+
+#### 3.4 导出登录信息（关键！）
+
+登录成功后，页面上会出现 **"导出登录信息"** 按钮，**点击它**！
+
+你会看到类似这样的内容：
+
+```
+Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.xxxxx...（很长一串）
+
+代理钱包私钥: 0x1234567890abcdef...（64位十六进制字符）
+```
+
+> 🔴 **请把这两个值复制保存下来！**
+>
+> 🔴 **请把这两个值复制保存下来！**
+>
+> 🔴 **请把这两个值复制保存下来！**
+
+### 什么是代理钱包？
+
+- 代理钱包是系统 **自动为你生成** 的一个临时钱包
+- 它 **只用于签名交易**，不存放你的资金
+- 你的资产仍然在你自己的钱包里，非常安全
+- **你不需要手动创建**，登录时系统会自动生成
 
 ---
 
-## 2. 配置环境变量
+## 第四步：配置环境变量
 
-在项目根目录新建 `.env` 文件（或修改已有 `.env`），填入以下配置：
+在项目根目录创建一个 `.env` 文件（如果已存在就修改它）。
+
+### 4.1 创建/编辑 .env 文件
+
+**macOS / Linux：**
+```bash
+nano .env
+```
+
+**Windows：**
+用记事本打开项目文件夹，新建一个文本文件，命名为 `.env`（注意前面有个点）
+
+### 4.2 填入以下内容
+
+> ⚠️ **请务必把下面的示例值替换成你自己的！**
+>
+> ⚠️ **请务必把下面的示例值替换成你自己的！**
+>
+> ⚠️ **请务必把下面的示例值替换成你自己的！**
 
 ```bash
+# ===== 交易所设置 =====
 EXCHANGE=standx
-STANDX_REQUEST_PRIVATE_KEY=你的代理钱包私钥 (1.2 获取 StandX 登录凭证（Token）中的代理钱包私钥)
-STANDX_TOKEN=你的token (1.2 获取 StandX 登录凭证（Token）中的token)
+
+# ===== 你的登录凭证（第三步获取的） =====
+# 把下面的 "你的TOKEN" 替换成你导出的 Token（很长一串以 eyJ 开头的）
+STANDX_TOKEN=你的TOKEN
+
+# 把下面的 "你的私钥" 替换成你导出的代理钱包私钥（0x 开头的）
+STANDX_REQUEST_PRIVATE_KEY=你的私钥
+
+# ===== 交易品种 =====
 STANDX_SYMBOL=BTC-USD
 
+# ===== 策略参数（新手直接用默认值就行） =====
 MAKER_POINTS_ORDER_AMOUNT=0.01
 MAKER_POINTS_CLOSE_THRESHOLD=0.1
 MAKER_POINTS_STOP_LOSS_USD=0
 MAKER_POINTS_MIN_REPRICE_BPS=3
 
+# ===== 挂单档位开关 =====
 MAKER_POINTS_BAND_0_10=true
 MAKER_POINTS_BAND_10_30=true
 MAKER_POINTS_BAND_30_100=true
 ```
 
-### 配置说明（新手可直接照抄）
-- `STANDX_TOKEN`: 登录后导出的 token（必须）
-- `STANDX_SYMBOL`: 交易对（默认 `BTC-USD`）
-- `MAKER_POINTS_ORDER_AMOUNT`: 每一笔挂单数量
-- `MAKER_POINTS_CLOSE_THRESHOLD`: 持仓达到该数值进入平仓模式（0 表示不自动平仓）
-- `MAKER_POINTS_STOP_LOSS_USD`: 亏损超过该值时市价平仓（0 表示关闭）
-- `MAKER_POINTS_MIN_REPRICE_BPS`: 盘口变动达到多少 bps 才会重算并撤单（默认 3）
-- `MAKER_POINTS_BAND_0_10` / `10_30` / `30_100`: 三个档位开关
+### 正确填写示例
+
+假设你导出的信息是：
+- Token: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ`
+- 代理钱包私钥: `0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890`
+
+那么你的 `.env` 应该这样写：
+
+```bash
+EXCHANGE=standx
+STANDX_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ
+STANDX_REQUEST_PRIVATE_KEY=0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890
+STANDX_SYMBOL=BTC-USD
+MAKER_POINTS_ORDER_AMOUNT=0.01
+MAKER_POINTS_CLOSE_THRESHOLD=0.1
+MAKER_POINTS_STOP_LOSS_USD=0
+MAKER_POINTS_MIN_REPRICE_BPS=3
+MAKER_POINTS_BAND_0_10=true
+MAKER_POINTS_BAND_10_30=true
+MAKER_POINTS_BAND_30_100=true
+```
+
+> 🔴 **不要加引号！不要加空格！直接粘贴值！**
+>
+> 🔴 **不要加引号！不要加空格！直接粘贴值！**
+>
+> 🔴 **不要加引号！不要加空格！直接粘贴值！**
 
 ---
 
-## 3. 启动策略
+## 第五步：启动策略
 
-### 3.1 普通启动
+### 普通启动（看实时仪表盘）
 ```bash
 bun run index.ts --strategy maker-points --exchange standx
 ```
 
-### 3.2 使用 PM2 后台运行（推荐）
+### 后台运行（推荐长期挂机）
 ```bash
 bun run pm2:start:maker-points
 ```
 
-PM2 会自动重启策略，适合长期运行。
+---
+
+## 配置参数说明
+
+| 参数 | 含义 | 新手建议 |
+|------|------|----------|
+| `STANDX_TOKEN` | 登录令牌 | 必填，从第三步获取 |
+| `STANDX_REQUEST_PRIVATE_KEY` | 代理钱包私钥 | 必填，从第三步获取 |
+| `STANDX_SYMBOL` | 交易品种 | 默认 `BTC-USD` |
+| `MAKER_POINTS_ORDER_AMOUNT` | 每笔挂单数量 | 建议 `0.01` 起步 |
+| `MAKER_POINTS_CLOSE_THRESHOLD` | 持仓达到多少开始平仓 | 设为 `0` 表示不自动平仓 |
+| `MAKER_POINTS_STOP_LOSS_USD` | 亏损多少美元强制平仓 | 设为 `0` 表示关闭止损 |
+| `MAKER_POINTS_BAND_*` | 三个挂单档位的开关 | 全部 `true` 即可 |
 
 ---
 
-## 4. 运行后你会看到什么
+## 常见问题
 
-启动后会显示仪表盘，包含：
-- 当前交易对与盘口
-- 当前仓位与浮动盈亏
-- 目标挂单列表
-- 已挂单列表
-- Binance 深度失衡状态
+### Q：报错说 Token 无效怎么办？
 
----
+重新去 https://standx.ritmex.one/ 登录，重新导出 Token。Token 可能过期了。
 
-## 5. 新手常见问题
+### Q：代理钱包私钥从哪来的？
 
-### Q1：为什么会撤单重挂？
-策略只有在盘口变化超过 `MAKER_POINTS_MIN_REPRICE_BPS` 或 Binance 深度状态变化时才会重算挂单。
+登录 standx.ritmex.one 后点击"导出登录信息"就能看到。
+**你不需要自己创建钱包，系统会自动生成！**
+**你不需要自己创建钱包，系统会自动生成！**
+**你不需要自己创建钱包，系统会自动生成！**
 
-### Q2：担心平掉手动持仓怎么办？
-把 `MAKER_POINTS_CLOSE_THRESHOLD` 设为 0 或者设成大于你的持仓即可。
+### Q：.env 文件放在哪？
 
-### Q3：我只想挂某个档位？
-把不需要的档位开关设为 `false` 即可。
+放在项目根目录，就是 `ritmex-bot` 文件夹里，和 `package.json` 同一个目录。
 
----
+### Q：为什么策略没有下单？
 
-## 6. 注意事项
+1. 检查账户里有没有足够的保证金
+2. 检查 TOKEN 和私钥是否正确填写
+3. 检查 .env 文件是否保存成功
 
-1. 请确保钱包里有足够的保证金/资金。
-2. 不要泄露 `STANDX_TOKEN`。
-3. 初次使用请先用小仓位测试。
+### Q：担心平掉我手动开的仓位？
+
+把 `MAKER_POINTS_CLOSE_THRESHOLD` 设为 `0` 或者设置成一个比你持仓大的数字。
 
 ---
 
-如果你需要我帮你定制参数或排查问题，直接把日志贴给我即可。
+## 安全提示
+
+1. **绝对不要把 TOKEN 和私钥分享给任何人！**
+2. **绝对不要把 TOKEN 和私钥分享给任何人！**
+3. **绝对不要把 TOKEN 和私钥分享给任何人！**
+
+代理钱包只用于签名，你的资产始终在你自己的主钱包里。但如果泄露了 TOKEN，别人可以用你的账户交易。
+
+---
+
+## 还是不会？
+
+把你的报错信息截图发到 Telegram 群里，会有人帮你：
+
+Telegram 群：https://t.me/+4fdo0quY87o4Mjhh
