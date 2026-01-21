@@ -1503,24 +1503,23 @@ export class MakerPointsEngine {
 
   /**
    * 检查数据是否过时，进入或退出防御模式
-   * 当 StandX 或 Binance 任意一方数据超过 5 秒未更新时，进入防御模式
+   * 仅检查深度数据（持续推送），账户数据只在变化时推送，不应作为过时判断依据
    */
   private checkDataStaleAndDefense(): void {
     const now = Date.now();
     const standxDepthStale = this.lastStandxDepthTime > 0 && (now - this.lastStandxDepthTime) > DATA_STALE_THRESHOLD_MS;
-    const standxAccountStale = this.lastStandxAccountTime > 0 && (now - this.lastStandxAccountTime) > DATA_STALE_THRESHOLD_MS;
+    // 账户数据只在有变化时推送，不作为过时判断依据
+    // const standxAccountStale = this.lastStandxAccountTime > 0 && (now - this.lastStandxAccountTime) > DATA_STALE_THRESHOLD_MS;
     const binanceStale = this.lastBinanceDepthTime > 0 && (now - this.lastBinanceDepthTime) > DATA_STALE_THRESHOLD_MS;
 
-    const shouldDefend = standxDepthStale || standxAccountStale || binanceStale;
+    const shouldDefend = standxDepthStale || binanceStale;
 
     if (shouldDefend && !this.defenseMode) {
       // 进入防御模式
       this.enterDefenseMode({
         standxDepthStale,
-        standxAccountStale,
         binanceStale,
         standxDepthAge: now - this.lastStandxDepthTime,
-        standxAccountAge: now - this.lastStandxAccountTime,
         binanceAge: now - this.lastBinanceDepthTime,
       });
     } else if (!shouldDefend && this.defenseMode) {
@@ -1535,10 +1534,8 @@ export class MakerPointsEngine {
    */
   private enterDefenseMode(staleInfo: {
     standxDepthStale: boolean;
-    standxAccountStale: boolean;
     binanceStale: boolean;
     standxDepthAge: number;
-    standxAccountAge: number;
     binanceAge: number;
   }): void {
     this.defenseMode = true;
@@ -1547,9 +1544,6 @@ export class MakerPointsEngine {
     const staleItems: string[] = [];
     if (staleInfo.standxDepthStale) {
       staleItems.push(`StandX深度(${Math.round(staleInfo.standxDepthAge / 1000)}s)`);
-    }
-    if (staleInfo.standxAccountStale) {
-      staleItems.push(`StandX账户(${Math.round(staleInfo.standxAccountAge / 1000)}s)`);
     }
     if (staleInfo.binanceStale) {
       staleItems.push(`Binance深度(${Math.round(staleInfo.binanceAge / 1000)}s)`);
