@@ -199,6 +199,8 @@ export interface MakerPointsConfig {
   minRepriceBps: number;
   /** 是否根据 Binance 盘口深度失衡自动取消单边挂单，默认 true */
   enableBinanceDepthCancel: boolean;
+  /** 0-10 bps 档位最小深度阈值 (BTC)，盘口到目标价之间的挂单量低于此值则跳过该档位，默认 1 */
+  band0To10MinDepth: number;
 }
 
 const defaultMakerPointsAmount = parseNumber(process.env.MAKER_POINTS_ORDER_AMOUNT, parseNumber(process.env.TRADE_AMOUNT, 0.001));
@@ -224,6 +226,7 @@ export const makerPointsConfig: MakerPointsConfig = {
   band30To100Amount: parseNumber(process.env.MAKER_POINTS_BAND_30_100_AMOUNT, defaultMakerPointsAmount),
   minRepriceBps: parseNumber(process.env.MAKER_POINTS_MIN_REPRICE_BPS, 3),
   enableBinanceDepthCancel: parseBoolean(process.env.MAKER_POINTS_BINANCE_DEPTH_CANCEL, true),
+  band0To10MinDepth: parseNumber(process.env.MAKER_POINTS_BAND_0_10_MIN_DEPTH, 1),
 };
 
 export interface BasisArbConfig {
