@@ -190,10 +190,10 @@ export class MakerPointsEngine {
     this.priceTick = Math.max(1e-9, this.config.priceTick);
     this.qtyStep = Math.max(1e-9, this.config.qtyStep);
     this.binanceDepth = new BinanceDepthTracker(resolveBinanceSymbol(this.config.symbol), {
-      baseUrl: process.env.BINANCE_WS_URL,
+      baseUrl: process.env.BINANCE_SPOT_WS_URL ?? process.env.BINANCE_WS_URL,
       levels: 20,
-      ratio: 5,
-      speedMs: 500,
+      ratio: 9,
+      speedMs: 100,
       logger: (context, error) => {
         this.tradeLog.push("warn", `Binance ${context} 异常: ${extractMessage(error)}`);
       },

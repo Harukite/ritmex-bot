@@ -6,10 +6,10 @@ const WebSocketCtor: typeof globalThis.WebSocket =
     ? globalThis.WebSocket
     : ((NodeWebSocket as unknown) as typeof globalThis.WebSocket);
 
-const DEFAULT_BASE_URL = "wss://fstream.binance.com/ws";
+const DEFAULT_BASE_URL = "wss://stream.binance.com:9443/ws";
 
 // ========== Binance WebSocket 连接管理常量 ==========
-// Binance 服务器每 3 分钟发送 ping，10 分钟无 pong 会断连
+// Binance 会发送 ping，若长时间无消息则认为连接异常
 // 我们设置 5 分钟作为心跳超时阈值（保守值）
 const HEARTBEAT_TIMEOUT_MS = 5 * 60 * 1000;
 // 心跳检查间隔（每 30 秒检查一次）
@@ -247,7 +247,7 @@ export class BinanceDepthTracker {
 
   /**
    * 启动心跳监控
-   * 根据 Binance 文档：10 分钟无 pong 会断连
+   * 根据 Binance 文档：长时间无 pong 会断连
    * 我们设置 5 分钟作为心跳超时阈值
    */
   private startHeartbeatMonitor(): void {
@@ -338,10 +338,10 @@ export class BinanceDepthTracker {
   private handlePayload(data: unknown): void {
     const payload = this.parsePayload(data);
     if (!payload) return;
-    const bids = Array.isArray(payload.b) ? payload.b : [];
-    const asks = Array.isArray(payload.a) ? payload.a : [];
+    const bids = Array.isArray(payload.b) ? payload.b : Array.isArray(payload.bids) ? payload.bids : [];
+    const asks = Array.isArray(payload.a) ? payload.a : Array.isArray(payload.asks) ? payload.asks : [];
     const depth = {
-      lastUpdateId: Number(payload.u ?? Date.now()),
+      lastUpdateId: Number(payload.lastUpdateId ?? payload.u ?? Date.now()),
       bids,
       asks,
     };
@@ -366,13 +366,22 @@ export class BinanceDepthTracker {
     }
   }
 
-  private parsePayload(data: unknown): { b?: [string, string][]; a?: [string, string][]; u?: number } | null {
+  private parsePayload(
+    data: unknown
+  ): { b?: [string, string][]; a?: [string, string][]; bids?: [string, string][]; asks?: [string, string][]; u?: number; lastUpdateId?: number } | null {
     try {
       const text = typeof data === "string" ? data : Buffer.isBuffer(data) ? data.toString("utf-8") : null;
       if (!text) return null;
       const parsed = JSON.parse(text);
       if (!parsed || typeof parsed !== "object") return null;
-      return parsed as { b?: [string, string][]; a?: [string, string][]; u?: number };
+      return parsed as {
+        b?: [string, string][];
+        a?: [string, string][];
+        bids?: [string, string][];
+        asks?: [string, string][];
+        u?: number;
+        lastUpdateId?: number;
+      };
     } catch {
       return null;
     }
