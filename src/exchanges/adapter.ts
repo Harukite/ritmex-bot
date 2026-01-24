@@ -84,5 +84,6 @@ export interface ExchangeAdapter {
   offRestHealthEvent?(listener: RestHealthListener): void;
   queryOpenOrders?(): Promise<AsterOrder[]>;
   queryAccountSnapshot?(): Promise<AsterAccountSnapshot | null>;
+  changeMarginMode?(params: { symbol: string; marginMode: "isolated" | "cross" }): Promise<void>;
   forceCancelAllOrders?(): Promise<boolean>;
 }

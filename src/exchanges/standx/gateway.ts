@@ -1462,6 +1462,30 @@ export class StandxGateway {
     return await this.refreshAccountSnapshot();
   }
 
+  async changeMarginMode(symbol: string, marginMode: "isolated" | "cross"): Promise<void> {
+    if (!this.signer.hasKey()) {
+      throw new Error("StandX change_margin_mode requires STANDX_REQUEST_PRIVATE_KEY for signed requests");
+    }
+    const normalized = normalizeSymbol(symbol);
+    const response = await this.requestJson<{ code?: number; message?: string; request_id?: string }>(
+      "/api/change_margin_mode",
+      {
+        method: "POST",
+        body: {
+          symbol: normalized,
+          margin_mode: marginMode,
+        },
+        signed: true,
+        extraHeaders: {
+          "x-session-id": this.sessionId,
+        },
+      }
+    );
+    if (response && typeof response.code === "number" && response.code !== 0) {
+      throw new Error(response.message ?? "StandX change margin mode rejected");
+    }
+  }
+
   private async refreshOpenOrders(symbol: string): Promise<void> {
     try {
       const ordersPayload = await this.requestJson<unknown>("/api/query_open_orders", {

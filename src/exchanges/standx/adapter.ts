@@ -161,6 +161,11 @@ export class StandxExchangeAdapter implements ExchangeAdapter {
     return this.gateway.queryAccountSnapshot();
   }
 
+  async changeMarginMode(params: { symbol: string; marginMode: "isolated" | "cross" }): Promise<void> {
+    await this.ensureInitialized("changeMarginMode");
+    await this.gateway.changeMarginMode(params.symbol, params.marginMode);
+  }
+
   /**
    * 强制取消所有挂单
    * 会查询当前挂单然后取消，并验证取消成功

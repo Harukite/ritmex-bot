@@ -99,6 +99,8 @@ describe("MakerPointsEngine defense-mode REST polling", () => {
       standxRestUnhealthy: false,
       standxRestConsecutiveErrors: 0,
       standxRestLastError: null,
+      marginModeNotIsolated: false,
+      marginMode: "isolated",
       standxDepthAge: 6000,
       binanceAge: 0,
       standxAccountAge: 0,
@@ -149,6 +151,8 @@ describe("MakerPointsEngine defense-mode REST polling", () => {
       standxRestUnhealthy: false,
       standxRestConsecutiveErrors: 0,
       standxRestLastError: null,
+      marginModeNotIsolated: false,
+      marginMode: "isolated",
       standxDepthAge: 6000,
       binanceAge: 0,
       standxAccountAge: 0,
@@ -162,4 +166,3 @@ describe("MakerPointsEngine defense-mode REST polling", () => {
     engine.stop();
   });
 });
-
