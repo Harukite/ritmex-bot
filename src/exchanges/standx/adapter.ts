@@ -7,6 +7,7 @@ import type {
   FundingRateListener,
   KlineListener,
   OrderListener,
+  RestHealthListener,
   TickerListener,
 } from "../adapter";
 import type { AsterOrder, CreateOrderParams } from "../types";
@@ -138,6 +139,14 @@ export class StandxExchangeAdapter implements ExchangeAdapter {
     this.gateway.offConnectionEvent(listener);
   }
 
+  onRestHealthEvent(listener: RestHealthListener): void {
+    this.gateway.onRestHealthEvent(listener);
+  }
+
+  offRestHealthEvent(listener: RestHealthListener): void {
+    this.gateway.offRestHealthEvent(listener);
+  }
+
   /**
    * 查询当前真实的挂单状态（通过 HTTP API）
    * 用于验证实际挂单情况，防止取消请求丢失
@@ -145,6 +154,11 @@ export class StandxExchangeAdapter implements ExchangeAdapter {
   async queryOpenOrders(): Promise<AsterOrder[]> {
     await this.ensureInitialized("queryOpenOrders");
     return this.gateway.queryOpenOrders(this.symbol);
+  }
+
+  async queryAccountSnapshot() {
+    await this.ensureInitialized("queryAccountSnapshot");
+    return this.gateway.queryAccountSnapshot();
   }
 
   /**

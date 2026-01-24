@@ -41,7 +41,11 @@ function formatNotificationMessage(notification: TradeNotification, accountLabel
     lines.push(``);
     for (const [key, value] of Object.entries(notification.details)) {
       if (value != null) {
-        lines.push(`• ${key}: ${value}`);
+        if (Array.isArray(value)) {
+          lines.push(`• ${key}: ${value.join(", ") || "[]"}`);
+        } else {
+          lines.push(`• ${key}: ${value}`);
+        }
       }
     }
   }

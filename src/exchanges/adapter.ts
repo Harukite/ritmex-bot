@@ -37,6 +37,17 @@ export interface FundingRateListener {
   (snapshot: FundingRateSnapshot): void;
 }
 
+export type RestHealthState = "healthy" | "unhealthy";
+export interface RestHealthInfo {
+  consecutiveErrors: number;
+  method?: string;
+  path?: string;
+  error?: string;
+}
+export interface RestHealthListener {
+  (state: RestHealthState, info: RestHealthInfo): void;
+}
+
 export interface ExchangePrecision {
   priceTick: number;
   qtyStep: number;
@@ -69,6 +80,9 @@ export interface ExchangeAdapter {
   // 连接保护相关方法（可选，仅 StandX 支持）
   onConnectionEvent?(listener: ConnectionEventListener): void;
   offConnectionEvent?(listener: ConnectionEventListener): void;
+  onRestHealthEvent?(listener: RestHealthListener): void;
+  offRestHealthEvent?(listener: RestHealthListener): void;
   queryOpenOrders?(): Promise<AsterOrder[]>;
+  queryAccountSnapshot?(): Promise<AsterAccountSnapshot | null>;
   forceCancelAllOrders?(): Promise<boolean>;
 }

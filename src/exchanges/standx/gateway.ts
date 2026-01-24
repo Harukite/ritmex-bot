@@ -8,6 +8,9 @@ import type {
   FundingRateListener,
   KlineListener,
   OrderListener,
+  RestHealthInfo,
+  RestHealthListener,
+  RestHealthState,
   TickerListener,
 } from "../adapter";
 import type {
@@ -62,6 +65,7 @@ const WS_HEARTBEAT_CHECK_INTERVAL = 30_000;
 const WS_DATA_STALE_THRESHOLD = 3000;
 // REST 轮询间隔（毫秒）- WS 断连或数据过时时的 REST 拉取间隔
 const REST_POLL_INTERVAL = 2000;
+const REST_ERROR_DEFENSE_THRESHOLD = 3;
 
 const SUPPORTED_QUOTES = ["USD", "USDT", "USDC", "DUSD"];
 
@@ -420,6 +424,10 @@ export class StandxGateway {
   private readonly virtualStops = new Map<string, VirtualStop>();
 
   private accountSnapshot: AsterAccountSnapshot | null = null;
+  private readonly restHealthListeners = new Set<RestHealthListener>();
+  private restConsecutiveErrors = 0;
+  private restUnhealthy = false;
+  private restLastError: string | null = null;
   private fundingState = new Map<string, FundingState>();
 
   private marketWs: WebSocket | null = null;
@@ -556,6 +564,14 @@ export class StandxGateway {
 
   onConnectionEvent(listener: ConnectionEventListener): void {
     this.connectionListeners.add(listener);
+  }
+
+  onRestHealthEvent(listener: RestHealthListener): void {
+    this.restHealthListeners.add(listener);
+  }
+
+  offRestHealthEvent(listener: RestHealthListener): void {
+    this.restHealthListeners.delete(listener);
   }
 
   offConnectionEvent(listener: ConnectionEventListener): void {
@@ -1411,7 +1427,7 @@ export class StandxGateway {
     }
   }
 
-  private async refreshAccountSnapshot(): Promise<void> {
+  private async refreshAccountSnapshot(): Promise<AsterAccountSnapshot | null> {
     try {
       const [balance, positions] = await Promise.all([
         this.requestJson<StandxBalanceSnapshot>("/api/query_balance", { method: "GET" }),
@@ -1435,9 +1451,15 @@ export class StandxGateway {
         this.balances.set(token, asset);
       }
       this.emitAccountSnapshot();
+      return this.accountSnapshot;
     } catch (error) {
       this.logger("accountSnapshot", error);
+      return null;
     }
+  }
+
+  async queryAccountSnapshot(): Promise<AsterAccountSnapshot | null> {
+    return await this.refreshAccountSnapshot();
   }
 
   private async refreshOpenOrders(symbol: string): Promise<void> {
@@ -1708,22 +1730,70 @@ export class StandxGateway {
         }
       }
     }
-    const response = await fetch(url.toString(), {
-      method: options.method,
-      headers,
-      body: options.method === "GET" ? undefined : body,
-    });
-    const text = await response.text();
-    if (!response.ok) {
-      throw new Error(`${options.method} ${path} failed (${response.status}): ${text}`);
-    }
-    if (!text) {
-      return {} as T;
-    }
     try {
-      return JSON.parse(text) as T;
-    } catch {
-      return text as unknown as T;
+      const response = await fetch(url.toString(), {
+        method: options.method,
+        headers,
+        body: options.method === "GET" ? undefined : body,
+      });
+      const text = await response.text();
+      if (!response.ok) {
+        throw new Error(`${options.method} ${path} failed (${response.status}): ${text}`);
+      }
+      if (!text) {
+        this.recordRestSuccess();
+        return {} as T;
+      }
+      try {
+        const parsed = JSON.parse(text) as T;
+        this.recordRestSuccess();
+        return parsed;
+      } catch {
+        this.recordRestSuccess();
+        return text as unknown as T;
+      }
+    } catch (error) {
+      this.recordRestError({
+        consecutiveErrors: this.restConsecutiveErrors + 1,
+        method: options.method,
+        path,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  private recordRestSuccess(): void {
+    if (this.restConsecutiveErrors === 0 && !this.restUnhealthy) return;
+    this.restConsecutiveErrors = 0;
+    this.restLastError = null;
+    if (!this.restUnhealthy) return;
+    this.restUnhealthy = false;
+    this.emitRestHealth("healthy", { consecutiveErrors: 0 });
+  }
+
+  private recordRestError(info: RestHealthInfo): void {
+    this.restConsecutiveErrors = Math.max(0, Number(info.consecutiveErrors) || 0);
+    this.restLastError = info.error ?? this.restLastError;
+
+    if (!this.restUnhealthy && this.restConsecutiveErrors >= REST_ERROR_DEFENSE_THRESHOLD) {
+      this.restUnhealthy = true;
+      this.emitRestHealth("unhealthy", {
+        consecutiveErrors: this.restConsecutiveErrors,
+        method: info.method,
+        path: info.path,
+        error: info.error ?? this.restLastError ?? undefined,
+      });
+    }
+  }
+
+  private emitRestHealth(state: RestHealthState, info: RestHealthInfo): void {
+    for (const listener of this.restHealthListeners) {
+      try {
+        listener(state, info);
+      } catch (error) {
+        this.logger("restHealthListener", error);
+      }
     }
   }
 

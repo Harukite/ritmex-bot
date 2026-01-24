@@ -10,9 +10,9 @@ import { formatPriceToString } from "../utils/math";
 import { createTradeLog, type TradeLogEntry } from "../logging/trade-log";
 import { extractMessage, isInsufficientBalanceError, isPrecisionError, isRateLimitError, isUnknownOrderError } from "../utils/errors";
 import { isOrderActiveStatus } from "../utils/order-status";
-import { getPosition, parseSymbolParts } from "../utils/strategy";
+import { getPosition, parseSymbolParts, validateAccountSnapshotForSymbol } from "../utils/strategy";
 import type { PositionSnapshot } from "../utils/strategy";
-import { computePositionPnl } from "../utils/pnl";
+import { computePositionPnl, computeStopLossPnl } from "../utils/pnl";
 import { getDepthBetweenPrices, getMidOrLast, getTopPrices } from "../utils/price";
 import {
   marketClose,
@@ -95,6 +95,8 @@ const STOP_LOSS_CHECK_INTERVAL_MS = 250; // 止损检查最大间隔
 const STOP_LOSS_RETRY_INTERVAL_MS = 500; // 止损失败后重试间隔
 const DATA_STALE_THRESHOLD_MS = 5_000; // 数据过时阈值（5秒）
 const DEFENSE_MODE_CHECK_INTERVAL_MS = 1000; // 防御模式检查间隔
+const ACCOUNT_DATA_STALE_THRESHOLD_MS = 20_000; // 账户数据长期无更新阈值（StandX 有 REST 兜底，长期无更新通常意味着异常）
+const STANDX_REST_ERROR_DEFENSE_THRESHOLD = 3;
 
 export class MakerPointsEngine {
   private accountSnapshot: AsterAccountSnapshot | null = null;
@@ -180,6 +182,9 @@ export class MakerPointsEngine {
   // 防御模式下的 REST 轮询定时器
   private defenseRestPollTimer: ReturnType<typeof setTimeout> | null = null;
   private defenseRestPollActive = false;
+  private standxRestConsecutiveErrors = 0;
+  private standxRestUnhealthy = false;
+  private standxRestLastError: string | null = null;
 
   constructor(private readonly config: MakerPointsConfig, private readonly exchange: ExchangeAdapter) {
     this.tradeLog = createTradeLog(this.config.maxLogEntries);
@@ -276,6 +281,7 @@ export class MakerPointsEngine {
 
   private bootstrap(): void {
     const log: LogHandler = (type, detail) => this.tradeLog.push(type, detail);
+    this.setupRestHealthProtection();
 
     safeSubscribe<AsterAccountSnapshot>(
       this.exchange.watchAccount.bind(this.exchange),
@@ -373,6 +379,36 @@ export class MakerPointsEngine {
         this.handleDisconnect(symbol);
       } else if (event === "reconnected") {
         this.handleReconnect(symbol);
+      }
+    });
+  }
+
+  private setupRestHealthProtection(): void {
+    if (!this.exchange.onRestHealthEvent) return;
+    this.exchange.onRestHealthEvent((state, info) => {
+      if (state === "unhealthy") {
+        this.standxRestUnhealthy = true;
+        this.standxRestConsecutiveErrors = Math.max(this.standxRestConsecutiveErrors, info.consecutiveErrors);
+        this.standxRestLastError = info.error ?? this.standxRestLastError;
+        if (!this.defenseMode && this.standxRestConsecutiveErrors >= STANDX_REST_ERROR_DEFENSE_THRESHOLD) {
+          this.enterDefenseMode({
+            standxDepthStale: false,
+            binanceStale: false,
+            standxAccountStale: false,
+            accountInvalid: false,
+            standxRestUnhealthy: true,
+            standxRestConsecutiveErrors: this.standxRestConsecutiveErrors,
+            standxRestLastError: this.standxRestLastError,
+            standxDepthAge: 0,
+            binanceAge: 0,
+            standxAccountAge: 0,
+            accountIssues: [],
+          });
+        }
+      } else if (state === "healthy") {
+        this.standxRestUnhealthy = false;
+        this.standxRestConsecutiveErrors = 0;
+        this.standxRestLastError = null;
       }
     });
   }
@@ -498,6 +534,26 @@ export class MakerPointsEngine {
         this.emitUpdate();
         return;
       }
+
+      const accountHealth = validateAccountSnapshotForSymbol(this.accountSnapshot, this.config.symbol);
+      if (!accountHealth.ok && !this.defenseMode) {
+        this.enterDefenseMode({
+          standxDepthStale: false,
+          binanceStale: false,
+          standxAccountStale: false,
+          accountInvalid: true,
+          standxRestUnhealthy: false,
+          standxRestConsecutiveErrors: this.standxRestConsecutiveErrors,
+          standxRestLastError: this.standxRestLastError,
+          standxDepthAge: 0,
+          binanceAge: 0,
+          standxAccountAge: 0,
+          accountIssues: accountHealth.issues,
+        });
+        this.emitUpdate();
+        return;
+      }
+
       this.resetReadinessFlags();
       if (!(await this.ensureStartupOrderReset())) {
         this.emitUpdate();
@@ -979,15 +1035,7 @@ export class MakerPointsEngine {
    */
   private computeRealtimePnl(position: PositionSnapshot): number | null {
     const { topBid, topAsk } = getTopPrices(this.depthSnapshot);
-    // 使用实时深度计算 PnL
-    if (topBid != null && topAsk != null) {
-      return computePositionPnl(position, topBid, topAsk);
-    }
-    // 回退到账户推送的数据
-    if (Number.isFinite(position.unrealizedProfit)) {
-      return position.unrealizedProfit;
-    }
-    return null;
+    return computeStopLossPnl(position, topBid, topAsk);
   }
 
   private async checkStopLoss(): Promise<void> {
@@ -1533,24 +1581,36 @@ export class MakerPointsEngine {
 
   /**
    * 检查数据是否过时，进入或退出防御模式
-   * 仅检查深度数据（持续推送），账户数据只在变化时推送，不应作为过时判断依据
+   * StandX 账户数据在 WS 推送异常时会通过 REST 补拉；长期无更新通常意味着 WS/REST 均异常，应进入防御模式
    */
   private checkDataStaleAndDefense(): void {
     const now = Date.now();
     const standxDepthStale = this.lastStandxDepthTime > 0 && (now - this.lastStandxDepthTime) > DATA_STALE_THRESHOLD_MS;
-    // 账户数据只在有变化时推送，不作为过时判断依据
-    // const standxAccountStale = this.lastStandxAccountTime > 0 && (now - this.lastStandxAccountTime) > DATA_STALE_THRESHOLD_MS;
     const binanceStale = this.lastBinanceDepthTime > 0 && (now - this.lastBinanceDepthTime) > DATA_STALE_THRESHOLD_MS;
 
-    const shouldDefend = standxDepthStale || binanceStale;
+    const standxAccountStale =
+      this.lastStandxAccountTime > 0 && (now - this.lastStandxAccountTime) > ACCOUNT_DATA_STALE_THRESHOLD_MS;
+    const accountHealth = validateAccountSnapshotForSymbol(this.accountSnapshot, this.config.symbol);
+    const accountInvalid = this.accountSnapshot != null && !accountHealth.ok;
+    const standxRestUnhealthy =
+      this.standxRestUnhealthy && this.standxRestConsecutiveErrors >= STANDX_REST_ERROR_DEFENSE_THRESHOLD;
+
+    const shouldDefend = standxDepthStale || binanceStale || standxAccountStale || accountInvalid || standxRestUnhealthy;
 
     if (shouldDefend && !this.defenseMode) {
       // 进入防御模式
       this.enterDefenseMode({
         standxDepthStale,
         binanceStale,
-        standxDepthAge: now - this.lastStandxDepthTime,
-        binanceAge: now - this.lastBinanceDepthTime,
+        standxAccountStale,
+        accountInvalid,
+        standxRestUnhealthy,
+        standxRestConsecutiveErrors: this.standxRestConsecutiveErrors,
+        standxRestLastError: this.standxRestLastError,
+        standxDepthAge: this.lastStandxDepthTime > 0 ? now - this.lastStandxDepthTime : 0,
+        binanceAge: this.lastBinanceDepthTime > 0 ? now - this.lastBinanceDepthTime : 0,
+        standxAccountAge: this.lastStandxAccountTime > 0 ? now - this.lastStandxAccountTime : 0,
+        accountIssues: accountInvalid ? accountHealth.issues : [],
       });
     } else if (!shouldDefend && this.defenseMode) {
       // 退出防御模式
@@ -1565,8 +1625,15 @@ export class MakerPointsEngine {
   private enterDefenseMode(staleInfo: {
     standxDepthStale: boolean;
     binanceStale: boolean;
+    standxAccountStale: boolean;
+    accountInvalid: boolean;
+    standxRestUnhealthy: boolean;
+    standxRestConsecutiveErrors: number;
+    standxRestLastError: string | null;
     standxDepthAge: number;
     binanceAge: number;
+    standxAccountAge: number;
+    accountIssues: string[];
   }): void {
     this.defenseMode = true;
 
@@ -1574,6 +1641,15 @@ export class MakerPointsEngine {
     const staleItems: string[] = [];
     if (staleInfo.standxDepthStale) {
       staleItems.push(`StandX深度(${Math.round(staleInfo.standxDepthAge / 1000)}s)`);
+    }
+    if (staleInfo.standxAccountStale) {
+      staleItems.push(`StandX账户(${Math.round(staleInfo.standxAccountAge / 1000)}s)`);
+    }
+    if (staleInfo.accountInvalid) {
+      staleItems.push(`StandX仓位数据异常(${staleInfo.accountIssues.join(",") || "unknown"})`);
+    }
+    if (staleInfo.standxRestUnhealthy) {
+      staleItems.push(`StandX REST错误(${staleInfo.standxRestConsecutiveErrors}次)`);
     }
     if (staleInfo.binanceStale) {
       staleItems.push(`Binance深度(${Math.round(staleInfo.binanceAge / 1000)}s)`);
@@ -1675,13 +1751,47 @@ export class MakerPointsEngine {
       if (!this.defenseRestPollActive || !this.defenseMode) return;
 
       try {
-        // 如果有查询挂单的方法，定期检查并取消
+        if (this.exchange.queryAccountSnapshot) {
+          const nextAccount = await this.exchange.queryAccountSnapshot();
+          if (nextAccount) {
+            this.accountSnapshot = nextAccount;
+            this.lastStandxAccountTime = Date.now();
+            this.feedStatus.account = true;
+            const health = validateAccountSnapshotForSymbol(nextAccount, this.config.symbol);
+            if (!health.ok) {
+              this.tradeLog.push("warn", `防御模式: 仓位数据仍异常: ${health.issues.join(",")}`);
+            }
+          } else {
+            this.tradeLog.push("warn", "防御模式: REST 获取账户快照为空");
+          }
+        }
+
+        // 防御模式下持续通过 REST 刷新挂单，并尽力撤销所有挂单（避免本地状态/WS 丢失导致遗留挂单）
         if (this.exchange.queryOpenOrders) {
-          const realOrders = await this.exchange.queryOpenOrders();
-          if (realOrders.length > 0) {
-            this.tradeLog.push("warn", `防御模式: 发现 ${realOrders.length} 个挂单，执行取消`);
+          try {
+            const realOrders = await this.exchange.queryOpenOrders();
+            this.openOrders = Array.isArray(realOrders)
+              ? realOrders.filter(
+                  (order) =>
+                    order.type !== "MARKET" &&
+                    order.symbol === this.config.symbol &&
+                    isOrderActiveStatus(order.status)
+                )
+              : [];
+            this.pendingCancelOrders.clear();
+            this.feedStatus.orders = true;
+
+            if (realOrders.length > 0) {
+              this.tradeLog.push("warn", `防御模式: 发现 ${realOrders.length} 个挂单，执行取消`);
+              await this.defenseCancelAllOrders();
+            }
+          } catch (error) {
+            this.tradeLog.push("error", `防御模式查询挂单失败: ${extractMessage(error)}`);
+            // 查询失败时仍然尝试撤销所有挂单（宁可多撤，也不遗留）
             await this.defenseCancelAllOrders();
           }
+        } else {
+          await this.defenseCancelAllOrders();
         }
 
         // 检查止损条件（使用当前账户快照中的数据）

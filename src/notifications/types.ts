@@ -7,7 +7,7 @@ export interface TradeNotification {
   title: string;
   message: string;
   accountLabel?: string;
-  details?: Record<string, string | number | boolean | null>;
+  details?: Record<string, string | number | boolean | null | string[]>;
   timestamp?: number;
 }
 

@@ -105,23 +105,51 @@ export function resolveSymbolFromEnv(explicitExchangeId?: SupportedExchangeId | 
     : resolveExchangeId();
   const { envKeys, fallback } = SYMBOL_PRIORITY_BY_EXCHANGE[exchangeId];
   for (const key of envKeys) {
-    const value = process.env[key];
-    if (value && value.trim()) {
-      return value.trim();
+    const value = normalizeEnvValue(process.env[key]);
+    if (value) {
+      return value;
     }
   }
   return fallback;
 }
 
+function normalizeEnvValue(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+
+  const quote = trimmed[0];
+  if ((quote === "'" || quote === "\"") && trimmed.endsWith(quote)) {
+    const unquoted = trimmed.slice(1, -1).trim();
+    return unquoted ? unquoted : undefined;
+  }
+
+  // Allow shell-style inline comments: KEY=value # comment
+  const commentIndexHash = trimmed.search(/\s#/);
+  const commentIndexSemi = trimmed.search(/\s;/);
+  const commentIndex =
+    commentIndexHash === -1
+      ? commentIndexSemi
+      : commentIndexSemi === -1
+        ? commentIndexHash
+        : Math.min(commentIndexHash, commentIndexSemi);
+  if (commentIndex !== -1) {
+    const withoutComment = trimmed.slice(0, commentIndex).trim();
+    return withoutComment ? withoutComment : undefined;
+  }
+
+  return trimmed;
+}
+
 function parseNumber(value: string | undefined, fallback: number): number {
-  if (!value) return fallback;
-  const next = Number(value);
+  const normalized = normalizeEnvValue(value);
+  if (!normalized) return fallback;
+  const next = Number(normalized);
   return Number.isFinite(next) ? next : fallback;
 }
 
 function parseBoolean(value: string | undefined, fallback: boolean): boolean {
-  if (!value) return fallback;
-  const normalized = value.trim().toLowerCase();
+  const normalized = normalizeEnvValue(value)?.toLowerCase();
   if (!normalized) return fallback;
   if (normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on") return true;
   if (normalized === "0" || normalized === "false" || normalized === "no" || normalized === "off") return false;

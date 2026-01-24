@@ -47,6 +47,47 @@ export function getPosition(snapshot: AsterAccountSnapshot | null, symbol: strin
   };
 }
 
+export function validateAccountSnapshotForSymbol(
+  snapshot: AsterAccountSnapshot | null,
+  symbol: string
+): { ok: true } | { ok: false; issues: string[] } {
+  if (!snapshot) return { ok: true };
+  const positions = snapshot.positions?.filter((p) => p.symbol === symbol) ?? [];
+  if (positions.length === 0) return { ok: true };
+
+  const NON_ZERO_EPS = 1e-8;
+  const issues: string[] = [];
+
+  for (const position of positions) {
+    const amt = Number(position.positionAmt);
+    if (!Number.isFinite(amt)) {
+      issues.push("invalid_positionAmt");
+      continue;
+    }
+    if (Math.abs(amt) <= NON_ZERO_EPS) {
+      continue;
+    }
+
+    const entryPrice = Number(position.entryPrice);
+    if (!Number.isFinite(entryPrice) || entryPrice <= 0) {
+      issues.push("invalid_entryPrice");
+    }
+
+    const unrealizedProfit = Number(position.unrealizedProfit);
+    if (!Number.isFinite(unrealizedProfit)) {
+      issues.push("invalid_unrealizedProfit");
+    }
+
+    const rawMark = Number(position.markPrice);
+    if (position.markPrice != null && position.markPrice !== "" && (!Number.isFinite(rawMark) || rawMark <= 0)) {
+      issues.push("invalid_markPrice");
+    }
+  }
+
+  if (issues.length === 0) return { ok: true };
+  return { ok: false, issues: Array.from(new Set(issues)) };
+}
+
 export function getSMA(values: AsterKline[], length: number): number | null {
   if (!Array.isArray(values) || values.length < length) return null;
   const window = values.slice(-length);
