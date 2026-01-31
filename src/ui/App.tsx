@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { Box, Text, useInput } from "ink";
 import { TrendApp } from "./TrendApp";
+import { SwingApp } from "./SwingApp";
 import { GuardianApp } from "./GuardianApp";
 import { MakerApp } from "./MakerApp";
 import { MakerPointsApp } from "./MakerPointsApp";
@@ -14,7 +15,7 @@ import { resolveExchangeId } from "../exchanges/create-adapter";
 import { t } from "../i18n";
 
 interface StrategyOption {
-  id: "trend" | "guardian" | "maker" | "maker-points" | "offset-maker" | "liquidity-maker" | "basis" | "grid";
+  id: "trend" | "swing" | "guardian" | "maker" | "maker-points" | "offset-maker" | "liquidity-maker" | "basis" | "grid";
   label: string;
   description: string;
   component: React.ComponentType<{ onExit: () => void }>;
@@ -26,6 +27,12 @@ const BASE_STRATEGIES: StrategyOption[] = [
     label: t("app.strategy.trend.label"),
     description: t("app.strategy.trend.desc"),
     component: TrendApp,
+  },
+  {
+    id: "swing",
+    label: t("app.strategy.swing.label"),
+    description: t("app.strategy.swing.desc"),
+    component: SwingApp,
   },
   {
     id: "guardian",
@@ -70,7 +77,9 @@ export function App() {
   const strategies = useMemo(() => {
     const next: StrategyOption[] = [...BASE_STRATEGIES];
     if (exchangeId === "standx") {
-      next.splice(3, 0, {
+      const gridIndex = next.findIndex((s) => s.id === "grid");
+      const insertAt = gridIndex === -1 ? next.length : gridIndex;
+      next.splice(insertAt, 0, {
         id: "maker-points" as const,
         label: t("app.strategy.makerPoints.label"),
         description: t("app.strategy.makerPoints.desc"),

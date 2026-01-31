@@ -403,6 +403,54 @@ export const liquidityMakerConfig: LiquidityMakerConfig = {
   entryDepthLevel: Math.max(1, Math.floor(parseNumber(process.env.MAKER_ENTRY_DEPTH_LEVEL, 1))),
 };
 
+export type SwingDirection = "both" | "long" | "short";
+
+export interface SwingConfig {
+  symbol: string;
+  tradeAmount: number;
+  pollIntervalMs: number;
+  maxLogEntries: number;
+  maxCloseSlippagePct: number;
+  priceTick: number;
+  qtyStep: number;
+  direction: SwingDirection;
+  rsiPeriod: number;
+  rsiHigh: number;
+  rsiLow: number;
+  stopLossPct: number;
+  signalSymbol: string;
+  signalInterval: string;
+}
+
+const resolveSwingDirection = (raw: string | undefined, fallback: SwingDirection): SwingDirection => {
+  if (!raw) return fallback;
+  const normalized = raw.trim().toLowerCase();
+  if (normalized === "long" || normalized === "long-only") return "long";
+  if (normalized === "short" || normalized === "short-only") return "short";
+  if (normalized === "both" || normalized === "dual" || normalized === "bi" || normalized === "two-way") return "both";
+  return fallback;
+};
+
+export const swingConfig: SwingConfig = {
+  symbol: resolveSymbolFromEnv(),
+  tradeAmount: parseNumber(process.env.SWING_TRADE_AMOUNT ?? process.env.TRADE_AMOUNT, 0.001),
+  pollIntervalMs: parseNumber(process.env.SWING_POLL_INTERVAL_MS, parseNumber(process.env.POLL_INTERVAL_MS, 500)),
+  maxLogEntries: parseNumber(process.env.SWING_MAX_LOG_ENTRIES, parseNumber(process.env.MAX_LOG_ENTRIES, 200)),
+  maxCloseSlippagePct: parseNumber(
+    process.env.SWING_MAX_CLOSE_SLIPPAGE_PCT ?? process.env.MAX_CLOSE_SLIPPAGE_PCT,
+    0.05
+  ),
+  priceTick: parseNumber(process.env.SWING_PRICE_TICK ?? process.env.PRICE_TICK, 0.1),
+  qtyStep: parseNumber(process.env.SWING_QTY_STEP ?? process.env.QTY_STEP, 0.001),
+  direction: resolveSwingDirection(process.env.SWING_DIRECTION, "short"),
+  rsiPeriod: Math.max(1, Math.floor(parseNumber(process.env.SWING_RSI_PERIOD, 14))),
+  rsiHigh: parseNumber(process.env.SWING_RSI_HIGH, 70),
+  rsiLow: parseNumber(process.env.SWING_RSI_LOW, 30),
+  stopLossPct: Math.max(0, parseNumber(process.env.SWING_STOP_LOSS_PCT, 0.05)),
+  signalSymbol: (process.env.SWING_SIGNAL_SYMBOL ?? "ETHBTC").trim().toUpperCase(),
+  signalInterval: (process.env.SWING_SIGNAL_INTERVAL ?? "4h").trim(),
+};
+
 export function isBasisStrategyEnabled(): boolean {
   const raw = process.env.ENABLE_BASIS_STRATEGY;
   if (!raw) return false;
