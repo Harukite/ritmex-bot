@@ -62,7 +62,7 @@ export async function createStopOrder(intent: StopOrderIntent): Promise<AsterOrd
       quantity: intent.quantity,
       stopPrice: intent.stopPrice,
       timeInForce: intent.timeInForce ?? "GTC",
-      triggerType: intent.triggerType ?? (intent.side === "BUY" ? "TAKE_PROFIT" : "STOP_LOSS"),
+      triggerType: intent.triggerType ?? "STOP_LOSS",
       closePosition: toStringBoolean(intent.closePosition ?? true),
       reduceOnly: toStringBoolean(intent.reduceOnly ?? true),
     },

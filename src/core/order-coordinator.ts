@@ -296,7 +296,7 @@ export async function placeStopLossOrder(
       timeInForce: "GTC",
       reduceOnly: true,
       closePosition: true,
-      triggerType: side === "BUY" ? "TAKE_PROFIT" : "STOP_LOSS",
+      triggerType: "STOP_LOSS",
     });
     pendings[type] = String(order.orderId);
     log("stop", `挂止损单: ${side} STOP_MARKET @ ${normalizedStop}`);
