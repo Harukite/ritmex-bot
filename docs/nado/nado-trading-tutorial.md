@@ -27,6 +27,11 @@ Nado 是一个运行在 **Ink L2 网络**（基于 Optimism Superchain）的去�
 - **低延迟**：使用 L2 网络，交易确认快速
 - **统一保证金**：支持多种资产作为抵押品
 
+注册使用 Nado 目前需要邀请码：
+
+* [https://app.nado.xyz?join=eGp9qPD](https://app.nado.xyz?join=eGp9qPD)
+* [https://app.nado.xyz?join=LKbIUs5](https://app.nado.xyz?join=LKbIUs5)
+
 ### ritmex-bot 交易机器人
 
 ritmex-bot 是一个多交易所量化交易终端，支持多种自动化交易策略：
