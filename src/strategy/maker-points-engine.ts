@@ -205,7 +205,7 @@ export class MakerPointsEngine {
       baseUrl: process.env.BINANCE_SPOT_WS_URL ?? process.env.BINANCE_WS_URL,
       restBaseUrl: process.env.BINANCE_REST_URL,
       levels: 20,
-      ratio: 9,
+      ratio: 8,
       depthWindowBps: 9,
       speedMs: 100,
       logger: (context, error) => {
