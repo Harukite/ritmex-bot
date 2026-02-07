@@ -346,7 +346,7 @@ export class MakerPointsEngine {
         this.lastStandxDepthTime = Date.now();
         this.feedStatus.depth = true;
         this.emitUpdate();
-        if (this.shouldTriggerImmediateDepthProtection(depth)) {
+        if (this.shouldTriggerImmediateDepthProtection(depth) || this.shouldTriggerImmediateReprice(depth)) {
           this.forceTickRequested = true;
           void this.tick();
         }
@@ -912,6 +912,24 @@ export class MakerPointsEngine {
     }
 
     return false;
+  }
+
+  /**
+   * 当盘口相对上次报价偏移超过 minRepriceBps 时，立即触发一次主循环，优先撤销旧报价。
+   */
+  private shouldTriggerImmediateReprice(depth: AsterDepth | null): boolean {
+    if (!depth) return false;
+    if (this.defenseMode || this.reconnectResetPending || this.stopLossProcessing) return false;
+
+    const hasActiveEntryOrders = this.openOrders.some(
+      (order) => order.symbol === this.config.symbol && !order.reduceOnly && isOrderActiveStatus(order.status)
+    );
+    if (!hasActiveEntryOrders) return false;
+
+    const { topBid, topAsk } = getTopPrices(depth);
+    if (topBid == null || topAsk == null) return false;
+
+    return this.shouldReprice(topBid, topAsk);
   }
 
   private buildCloseOnlyOrders(
