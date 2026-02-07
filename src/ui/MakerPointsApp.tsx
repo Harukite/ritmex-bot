@@ -162,6 +162,7 @@ export function MakerPointsApp({ onExit }: MakerPointsAppProps) {
           {t("makerPoints.binanceLine", {
             buy: formatNumber(snapshot.binanceDepth?.buySum ?? 0, 4),
             sell: formatNumber(snapshot.binanceDepth?.sellSum ?? 0, 4),
+            windowBps: snapshot.binanceDepth?.windowBps ?? 5,
             status: imbalanceLabel,
           })}
         </Text>

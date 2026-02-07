@@ -206,8 +206,12 @@ export class MakerPointsEngine {
       baseUrl: process.env.BINANCE_SPOT_WS_URL ?? process.env.BINANCE_WS_URL,
       restBaseUrl: process.env.BINANCE_REST_URL,
       levels: 20,
-      ratio: 2,
-      depthWindowBps: 9,
+      ratio: Number.isFinite(this.config.binanceDepthImbalanceRatio)
+        ? Math.max(1.01, Number(this.config.binanceDepthImbalanceRatio))
+        : 8,
+      depthWindowBps: Number.isFinite(this.config.binanceDepthWindowBps)
+        ? Math.max(1, Number(this.config.binanceDepthWindowBps))
+        : 5,
       speedMs: 100,
       logger: (context, error) => {
         this.tradeLog.push("warn", `Binance ${context} 异常: ${extractMessage(error)}`);
