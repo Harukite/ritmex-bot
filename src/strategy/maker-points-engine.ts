@@ -772,17 +772,17 @@ export class MakerPointsEngine {
       const shouldCheckDepth = minDepth > 0;
 
       if (!skipBuy) {
-        const price = bid1 * (1 - bps / 10000);
-        if (Number.isFinite(price) && price > 0) {
+        const targetPrice = this.normalizeDepthTargetPrice(bid1 * (1 - bps / 10000), priceDecimals);
+        if (targetPrice != null) {
           if (shouldCheckDepth) {
-            const depthQty = getDepthBetweenPrices(depth, "BUY", price);
+            const depthQty = getDepthBetweenPrices(depth, "BUY", targetPrice);
             if (depthQty < minDepth) {
               this.logThinDepthSkip("BUY", bps, depthQty, minDepth);
             } else {
               this.resetThinDepthSkip("BUY", bps);
               desired.push({
                 side: "BUY",
-                price: formatPriceToString(price, priceDecimals),
+                price: formatPriceToString(targetPrice, priceDecimals),
                 amount,
                 reduceOnly: false,
               });
@@ -790,7 +790,7 @@ export class MakerPointsEngine {
           } else {
             desired.push({
               side: "BUY",
-              price: formatPriceToString(price, priceDecimals),
+              price: formatPriceToString(targetPrice, priceDecimals),
               amount,
               reduceOnly: false,
             });
@@ -798,17 +798,17 @@ export class MakerPointsEngine {
         }
       }
       if (!skipSell) {
-        const price = ask1 * (1 + bps / 10000);
-        if (Number.isFinite(price) && price > 0) {
+        const targetPrice = this.normalizeDepthTargetPrice(ask1 * (1 + bps / 10000), priceDecimals);
+        if (targetPrice != null) {
           if (shouldCheckDepth) {
-            const depthQty = getDepthBetweenPrices(depth, "SELL", price);
+            const depthQty = getDepthBetweenPrices(depth, "SELL", targetPrice);
             if (depthQty < minDepth) {
               this.logThinDepthSkip("SELL", bps, depthQty, minDepth);
             } else {
               this.resetThinDepthSkip("SELL", bps);
               desired.push({
                 side: "SELL",
-                price: formatPriceToString(price, priceDecimals),
+                price: formatPriceToString(targetPrice, priceDecimals),
                 amount,
                 reduceOnly: false,
               });
@@ -816,7 +816,7 @@ export class MakerPointsEngine {
           } else {
             desired.push({
               side: "SELL",
-              price: formatPriceToString(price, priceDecimals),
+              price: formatPriceToString(targetPrice, priceDecimals),
               amount,
               reduceOnly: false,
             });
@@ -839,6 +839,7 @@ export class MakerPointsEngine {
   ): boolean {
     const minDepth = this.config.filterMinDepth;
     if (minDepth <= 0) return false;
+    const priceDecimals = this.getPriceDecimals();
 
     // 获取启用的所有档位
     const targets = buildBpsTargets({
@@ -850,11 +851,11 @@ export class MakerPointsEngine {
     let changed = false;
 
     for (const bps of targets) {
-      const buyPrice = bid1 * (1 - bps / 10000);
-      const sellPrice = ask1 * (1 + bps / 10000);
+      const buyTargetPrice = this.normalizeDepthTargetPrice(bid1 * (1 - bps / 10000), priceDecimals);
+      const sellTargetPrice = this.normalizeDepthTargetPrice(ask1 * (1 + bps / 10000), priceDecimals);
 
-      const buyDepthQty = getDepthBetweenPrices(depth, "BUY", buyPrice);
-      const sellDepthQty = getDepthBetweenPrices(depth, "SELL", sellPrice);
+      const buyDepthQty = getDepthBetweenPrices(depth, "BUY", buyTargetPrice ?? 0);
+      const sellDepthQty = getDepthBetweenPrices(depth, "SELL", sellTargetPrice ?? 0);
       const currentBuyOk = buyDepthQty >= minDepth;
       const currentSellOk = sellDepthQty >= minDepth;
 
@@ -889,15 +890,16 @@ export class MakerPointsEngine {
       band10To30: this.config.enableBand10To30,
       band30To100: this.config.enableBand30To100,
     });
+    const priceDecimals = this.getPriceDecimals();
 
     for (const bps of targets) {
       const lastStatus = this.lastDepthOkStatus[bps];
       if (!lastStatus) continue;
 
-      const buyPrice = topBid * (1 - bps / 10000);
-      const sellPrice = topAsk * (1 + bps / 10000);
-      const buyDepthQty = getDepthBetweenPrices(depth, "BUY", buyPrice);
-      const sellDepthQty = getDepthBetweenPrices(depth, "SELL", sellPrice);
+      const buyTargetPrice = this.normalizeDepthTargetPrice(topBid * (1 - bps / 10000), priceDecimals);
+      const sellTargetPrice = this.normalizeDepthTargetPrice(topAsk * (1 + bps / 10000), priceDecimals);
+      const buyDepthQty = getDepthBetweenPrices(depth, "BUY", buyTargetPrice ?? 0);
+      const sellDepthQty = getDepthBetweenPrices(depth, "SELL", sellTargetPrice ?? 0);
       const currentBuyOk = buyDepthQty >= minDepth;
       const currentSellOk = sellDepthQty >= minDepth;
 
@@ -1344,6 +1346,13 @@ export class MakerPointsEngine {
     return Math.max(0, Math.floor(raw + 1e-9));
   }
 
+  private normalizeDepthTargetPrice(price: number, priceDecimals: number): number | null {
+    if (!Number.isFinite(price) || price <= 0) return null;
+    const normalized = Number(formatPriceToString(price, priceDecimals));
+    if (!Number.isFinite(normalized) || normalized <= 0) return null;
+    return normalized;
+  }
+
   private emitUpdate(): void {
     try {
       const snapshot = this.buildSnapshot();
@@ -1398,12 +1407,13 @@ export class MakerPointsEngine {
     if (!this.depthSnapshot || topBid == null || topAsk == null) {
       return bands;
     }
+    const priceDecimals = this.getPriceDecimals();
 
     return bands.map((band) => {
-      const buyPrice = topBid * (1 - band.bps / 10000);
-      const sellPrice = topAsk * (1 + band.bps / 10000);
-      const buyDepth = getDepthBetweenPrices(this.depthSnapshot, "BUY", buyPrice);
-      const sellDepth = getDepthBetweenPrices(this.depthSnapshot, "SELL", sellPrice);
+      const buyTargetPrice = this.normalizeDepthTargetPrice(topBid * (1 - band.bps / 10000), priceDecimals);
+      const sellTargetPrice = this.normalizeDepthTargetPrice(topAsk * (1 + band.bps / 10000), priceDecimals);
+      const buyDepth = getDepthBetweenPrices(this.depthSnapshot, "BUY", buyTargetPrice ?? 0);
+      const sellDepth = getDepthBetweenPrices(this.depthSnapshot, "SELL", sellTargetPrice ?? 0);
       return { ...band, buyDepth, sellDepth };
     });
   }
