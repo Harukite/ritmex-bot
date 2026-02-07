@@ -128,6 +128,7 @@ export class MakerPointsEngine {
   private processing = false;
   private stopLossProcessing = false;
   private stopLossCooldownUntil = 0;
+  private forceTickRequested = false;
   private desiredOrders: DesiredOrder[] = [];
   private accountUnrealized = 0;
   private initialOrderSnapshotReady = false;
@@ -341,6 +342,10 @@ export class MakerPointsEngine {
         this.lastStandxDepthTime = Date.now();
         this.feedStatus.depth = true;
         this.emitUpdate();
+        if (this.shouldTriggerImmediateDepthProtection(depth)) {
+          this.forceTickRequested = true;
+          void this.tick();
+        }
       },
       log,
       {
@@ -568,7 +573,9 @@ export class MakerPointsEngine {
     this.processing = true;
     let hadRateLimit = false;
     try {
-      const decision = this.rateLimit.beforeCycle();
+      const forceRun = this.forceTickRequested;
+      this.forceTickRequested = false;
+      const decision = forceRun ? "run" : this.rateLimit.beforeCycle();
       if (decision === "paused") {
         this.emitUpdate();
         return;
@@ -862,6 +869,43 @@ export class MakerPointsEngine {
     }
 
     return changed;
+  }
+
+  /**
+   * 当深度从“满足阈值”切换到“不满足阈值”时，立即触发一次主循环，优先撤销不再安全的挂单。
+   */
+  private shouldTriggerImmediateDepthProtection(depth: AsterDepth | null): boolean {
+    if (!depth) return false;
+    if (this.defenseMode || this.reconnectResetPending || this.stopLossProcessing) return false;
+
+    const minDepth = this.config.filterMinDepth;
+    if (minDepth <= 0) return false;
+
+    const { topBid, topAsk } = getTopPrices(depth);
+    if (topBid == null || topAsk == null) return false;
+
+    const targets = buildBpsTargets({
+      band0To10: this.config.enableBand0To10,
+      band10To30: this.config.enableBand10To30,
+      band30To100: this.config.enableBand30To100,
+    });
+
+    for (const bps of targets) {
+      const lastStatus = this.lastDepthOkStatus[bps];
+      if (!lastStatus) continue;
+
+      const buyPrice = topBid * (1 - bps / 10000);
+      const sellPrice = topAsk * (1 + bps / 10000);
+      const buyDepthQty = getDepthBetweenPrices(depth, "BUY", buyPrice);
+      const sellDepthQty = getDepthBetweenPrices(depth, "SELL", sellPrice);
+      const currentBuyOk = buyDepthQty >= minDepth;
+      const currentSellOk = sellDepthQty >= minDepth;
+
+      if (lastStatus.buy && !currentBuyOk) return true;
+      if (lastStatus.sell && !currentSellOk) return true;
+    }
+
+    return false;
   }
 
   private buildCloseOnlyOrders(
