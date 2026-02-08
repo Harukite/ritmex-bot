@@ -27,7 +27,7 @@ class StubAdapter implements ExchangeAdapter {
 }
 
 describe("MakerPointsEngine Binance depth monitor config", () => {
-  it("uses default 3bps window and ratio 8", () => {
+  it("uses default 3bps window and ratio 9", () => {
     const engine = new MakerPointsEngine(
       {
         symbol: "BTC-USD",
@@ -56,7 +56,7 @@ describe("MakerPointsEngine Binance depth monitor config", () => {
       .options;
 
     expect(trackerOptions?.depthWindowBps).toBe(3);
-    expect(trackerOptions?.ratio).toBe(8);
+    expect(trackerOptions?.ratio).toBe(9);
 
     engine.stop();
   });

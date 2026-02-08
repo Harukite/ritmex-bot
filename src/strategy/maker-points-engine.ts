@@ -208,7 +208,7 @@ export class MakerPointsEngine {
       levels: 20,
       ratio: Number.isFinite(this.config.binanceDepthImbalanceRatio)
         ? Math.max(1.01, Number(this.config.binanceDepthImbalanceRatio))
-        : 8,
+        : 9,
       depthWindowBps: Number.isFinite(this.config.binanceDepthWindowBps)
         ? Math.max(1, Number(this.config.binanceDepthWindowBps))
         : 3,

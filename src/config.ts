@@ -229,7 +229,7 @@ export interface MakerPointsConfig {
   enableBinanceDepthCancel: boolean;
   /** Binance 深度监控窗口（bps），默认 3 */
   binanceDepthWindowBps?: number;
-  /** Binance 深度失衡比例阈值，默认 8 */
+  /** Binance 深度失衡比例阈值，默认 9 */
   binanceDepthImbalanceRatio?: number;
   /** 各档位最小深度阈值 (BTC)，盘口到目标价之间的挂单量低于此值则跳过该档位，默认 10 */
   filterMinDepth: number;
@@ -259,7 +259,7 @@ export const makerPointsConfig: MakerPointsConfig = {
   minRepriceBps: parseNumber(process.env.MAKER_POINTS_MIN_REPRICE_BPS, 3),
   enableBinanceDepthCancel: parseBoolean(process.env.MAKER_POINTS_BINANCE_DEPTH_CANCEL, true),
   binanceDepthWindowBps: parseNumber(process.env.MAKER_POINTS_BINANCE_DEPTH_WINDOW_BPS, 3),
-  binanceDepthImbalanceRatio: parseNumber(process.env.MAKER_POINTS_BINANCE_DEPTH_IMBALANCE_RATIO, 8),
+  binanceDepthImbalanceRatio: parseNumber(process.env.MAKER_POINTS_BINANCE_DEPTH_IMBALANCE_RATIO, 9),
   filterMinDepth: parseNumber(process.env.MAKER_POINTS_FILTER_MIN_DEPTH, 10),
 };
 
