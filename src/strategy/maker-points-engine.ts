@@ -211,7 +211,7 @@ export class MakerPointsEngine {
         : 8,
       depthWindowBps: Number.isFinite(this.config.binanceDepthWindowBps)
         ? Math.max(1, Number(this.config.binanceDepthWindowBps))
-        : 5,
+        : 3,
       speedMs: 100,
       logger: (context, error) => {
         this.tradeLog.push("warn", `Binance ${context} 异常: ${extractMessage(error)}`);
