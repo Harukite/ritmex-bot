@@ -4,15 +4,6 @@
 
 A Bun-powered multi-exchange perpetuals workstation that ships an SMA30 trend engine, a Guardian stop sentinel, and two market-making modes. It offers instant restarts, realtime market data, structured logging, and an Ink-based CLI dashboard.
 
-## CLI Command Mode (`ritmex-bot`)
-`ritmex-bot` provides an agent-friendly command interface for exchange capability checks, market data, account/position queries, order operations, and strategy execution.
-
-- It keeps the current environment-variable system intact: no renaming and no new required keys.
-- `--symbol` is passed through exactly as provided (no symbol normalization).
-- It supports `--dry-run` simulation and `--json` structured output for automation.
-
-Full guide: [ritmex-bot CLI User Guide (English)](cli-guide.en.md)
-
 If you'd like to support this project and get fee discounts, please consider using these referral links:
 
 * [Lighter referral link](https://app.lighter.xyz/?referral=111909FA)
@@ -25,6 +16,21 @@ If you'd like to support this project and get fee discounts, please consider usi
 * [edgex referral link](https://pro.edgex.exchange/referral/BULL)
 * [Paradex referral link](https://paradex.io/ref/xingxingjun)
 * [Apex referral link](https://join.omni.apex.exchange/SEA)
+
+## CLI Command Mode (`ritmex-bot`)
+`ritmex-bot` provides an agent-friendly command interface for exchange capability checks, market data, account/position queries, order operations, and strategy execution.
+
+- It keeps the current environment-variable system intact: no renaming and no new required keys.
+- `--symbol` is passed through exactly as provided (no symbol normalization).
+- It supports `--dry-run` simulation and `--json` structured output for automation.
+
+### Install This Project Skill (`skills add`)
+```bash
+npx skills add https://github.com/discountry/ritmex-bot --skill use-ritmex-bot
+```
+If you need a specific branch/tag, append `--ref <branch-or-tag>`.
+
+Full guide: [ritmex-bot CLI User Guide (English)](cli-guide.en.md)
 
 ## Documentation Map
 - [ritmex-bot CLI User Guide (English)](cli-guide.en.md)

@@ -8,15 +8,6 @@ A Bun-powered multi-exchange perpetuals workstation that ships an SMA30 trend en
 
 基于 Bun 的多交易所永续合约量化终端，内置趋势跟随（SMA30）、Guardian 防守与做市策略，支持快速恢复、实时行情订阅、日志追踪与 CLI 仪表盘。
 
-## CLI 命令模式（ritmex-bot）
-`ritmex-bot` 支持 Agent 友好的结构化命令调用，覆盖交易所能力查询、行情、账户、仓位、下单、撤单与策略启动。
-
-- 保持现有环境变量体系，不新增也不改名，只读取当前执行环境中的变量。
-- `--symbol` 原样透传，不对交易对做统一改写。
-- 支持 `--dry-run` 模拟执行与 `--json` 结构化输出，便于自动化系统集成。
-
-完整文档请见：[ritmex-bot CLI 使用手册（中文）](cli-guide.md)
-
 如果您希望获取优惠并支持本项目，请考虑使用以下注册链接：
 
 * [Lighter 手续费优惠注册链接](https://app.lighter.xyz/?referral=111909FA)
@@ -29,6 +20,21 @@ A Bun-powered multi-exchange perpetuals workstation that ships an SMA30 trend en
 * [edgex 手续费优惠注册链接](https://pro.edgex.exchange/referral/BULL)
 * [Paradex 手续费优惠注册链接](https://paradex.io/ref/xingxingjun)
 * [Apex 手续费优惠注册链接](https://join.omni.apex.exchange/SEA)
+
+## CLI 命令模式（ritmex-bot）
+`ritmex-bot` 支持 Agent 友好的结构化命令调用，覆盖交易所能力查询、行情、账户、仓位、下单、撤单与策略启动。
+
+- 保持现有环境变量体系，不新增也不改名，只读取当前执行环境中的变量。
+- `--symbol` 原样透传，不对交易对做统一改写。
+- 支持 `--dry-run` 模拟执行与 `--json` 结构化输出，便于自动化系统集成。
+
+### 安装当前项目 Skill（skills add）
+```bash
+npx skills add https://github.com/discountry/ritmex-bot --skill use-ritmex-bot
+```
+如需指定分支，可追加 `--ref <branch-or-tag>`。
+
+完整文档请见：[ritmex-bot CLI 使用手册（中文）](cli-guide.md)
 
 ## 文档索引
 - [ritmex-bot CLI 使用手册（中文）](cli-guide.md)

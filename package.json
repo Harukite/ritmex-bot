@@ -4,6 +4,10 @@
   "module": "index.ts",
   "type": "module",
   "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/discountry/ritmex-bot.git"
+  },
   "bin": {
     "ritmex-bot": "./bin/ritmex-bot"
   },
