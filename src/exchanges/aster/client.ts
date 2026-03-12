@@ -543,7 +543,7 @@ export class AsterSpotRestClient {
     }
     try {
       return JSON.parse(text) as T;
-    } catch (error) {
+    } catch {
       throw new Error(`[AsterSpotRestClient] 无法解析响应: ${text.slice(0, 200)}`);
     }
   }
@@ -795,7 +795,7 @@ export class AsterRestClient {
     }
     try {
       return JSON.parse(text) as AsterFuturesExchangeInfo;
-    } catch (error) {
+    } catch {
       throw new Error(`[AsterRestClient] 无法解析交易规则响应: ${text.slice(0, 200)}`);
     }
   }
@@ -869,7 +869,7 @@ export class AsterRestClient {
     try {
       const payload = JSON.parse(text) as any[];
       return payload.map((entry) => fromRestKline(entry, interval, upper));
-    } catch (error) {
+    } catch {
       throw new Error(`[AsterRestClient] 无法解析K线响应: ${text.slice(0, 200)}`);
     }
   }
@@ -899,7 +899,7 @@ export class AsterRestClient {
       const payload = JSON.parse(text) as any;
       // The response shape mirrors Binance: { symbol, markPrice, indexPrice, lastFundingRate, nextFundingTime, time }
       return payload;
-    } catch (error) {
+    } catch {
       throw new Error(`[AsterRestClient] 无法解析资金费率响应: ${text.slice(0, 200)}`);
     }
   }
@@ -942,7 +942,7 @@ export class AsterRestClient {
     }
     try {
       return JSON.parse(text) as T;
-    } catch (error) {
+    } catch {
       throw new Error(`[AsterRestClient] 无法解析响应: ${text.slice(0, 200)}`);
     }
   }
@@ -1366,7 +1366,7 @@ export class AsterGateway {
     });
   }
 
-  async ensureInitialized(symbol: string): Promise<void> {
+  async ensureInitialized(_symbol: string): Promise<void> {
     if (this.initialized) return;
     if (this.initializing) return this.initializing;
     this.initializing = (async () => {

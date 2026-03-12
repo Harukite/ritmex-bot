@@ -32,7 +32,7 @@ function loadCcxtPro(): any | null {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const mod = require("ccxt.pro");
     return mod?.default ?? mod;
-  } catch (_error) {
+  } catch {
     return null;
   }
 }
@@ -571,7 +571,6 @@ export class ParadexGateway {
       const market = typeof (this.exchange as any).market === "function"
         ? (this.exchange as any).market(symbol)
         : (this.exchange.markets ?? {})[symbol];
-      const precisionDigits = Number((market?.precision?.amount ?? market?.amountPrecision));
       const limitMin = Number(market?.limits?.amount?.min);
       // Only trust explicit exchange min limit; do NOT infer 1 from precision=0
       const minAmount = Number.isFinite(limitMin) && limitMin > 0 ? limitMin : undefined;
@@ -593,7 +592,7 @@ export class ParadexGateway {
       if (typeof (this.exchange as any).amountToPrecision === "function" && Number.isFinite(Number(amount))) {
         amount = Number((this.exchange as any).amountToPrecision(symbol, amount));
       }
-    } catch (_normalizeError) {
+    } catch {
       // Swallow precision normalization errors and let exchange validation surface if any
     }
 
@@ -944,7 +943,7 @@ export class ParadexGateway {
     }
   }
 
-  private updateOrdersFromRemote(open: CcxtOrder[], closed: CcxtOrder[]): void {
+  private updateOrdersFromRemote(open: CcxtOrder[], _closed: CcxtOrder[]): void {
     const nextOpen = new Map<string, AsterOrder>();
 
     for (const order of open) {

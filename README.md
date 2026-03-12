@@ -226,6 +226,8 @@ EXCHANGE=binance BINANCE_MARKET_TYPE=spot BINANCE_SYMBOL=BTCUSDT bun run index.t
 bun run index.ts   # 启动 CLI（默认入口）
 bun run start      # 等价于运行 index.ts
 bun run dev        # 调试模式
+bun run lint       # 执行 Oxlint 检查
+bun run lint:fix   # 自动修复可安全修复的问题
 bun x vitest run   # 执行全部测试
 ```
 
@@ -292,6 +294,8 @@ bun run pm2:start:offset
 ## 测试
 项目使用 Vitest：
 ```bash
+bun run lint
+bun run lint:fix
 bun run test
 bun x vitest --watch
 ```

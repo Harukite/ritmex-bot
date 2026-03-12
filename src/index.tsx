@@ -4,7 +4,6 @@ import { App } from "./ui/App";
 import { setupGlobalErrorHandlers } from "./runtime-errors";
 import { parseCliArgs, printCliHelp } from "./cli/args";
 import { startStrategy } from "./cli/strategy-runner";
-import { resolveExchangeId } from "./exchanges/create-adapter";
 import { CommandParseError, parseCommandArgv, printCommandHelp } from "./cli/command-parser";
 import { executeCliCommand, renderCommandPayload } from "./cli/command-executor";
 

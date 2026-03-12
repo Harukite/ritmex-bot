@@ -1684,7 +1684,7 @@ export class NadoGateway {
     try {
       const text = typeof data === "string" ? data : data.toString("utf8");
       message = JSON.parse(text);
-    } catch (_error) {
+    } catch {
       return;
     }
     if (!message || typeof message !== "object") return;

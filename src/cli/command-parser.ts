@@ -155,7 +155,7 @@ function parseExchangeCommand(
   options: Record<string, string | boolean>,
   common: CommandCommonOptions & { help?: boolean }
 ): ParsedCliCommand {
-  assertAllowedOptions(options, new Set([...GLOBAL_OPTION_NAMES]));
+  assertAllowedOptions(options, new Set(GLOBAL_OPTION_NAMES));
   if (action === "list") return { kind: "exchange-list", ...common };
   if (action === "capabilities") return { kind: "exchange-capabilities", ...common };
   throw new CommandParseError(`Unsupported exchange action '${action}'`);

@@ -128,7 +128,7 @@ function computeExecutedQty(order: LighterOrder): string {
       if (Number.isFinite(initial) && Number.isFinite(remaining)) {
         return (initial - remaining).toString();
       }
-    } catch (_) {
+    } catch {
       // fall through
     }
   }

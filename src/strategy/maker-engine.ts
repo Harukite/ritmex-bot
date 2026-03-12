@@ -3,7 +3,6 @@ import type { ExchangeAdapter } from "../exchanges/adapter";
 import type {
   AsterAccountSnapshot,
   AsterDepth,
-  AsterKline,
   AsterOrder,
   AsterTicker,
 } from "../exchanges/types";

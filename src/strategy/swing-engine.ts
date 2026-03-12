@@ -422,7 +422,7 @@ export class SwingEngine {
         : position.entryPrice * (1 + Math.max(0, this.config.stopLossPct));
 
     const tick = Math.max(1e-9, this.config.priceTick);
-    const lastPrice = referencePrice ?? Number(this.tickerSnapshot?.lastPrice) ?? null;
+    const lastPrice = referencePrice;
 
     // Kill-switch (always-on).
     const triggerKill =
@@ -621,4 +621,3 @@ export class SwingEngine {
       });
   }
 }
-

@@ -16,12 +16,10 @@ import type {
   AsterTicker,
   CreateOrderParams,
 } from "../types";
-import { extractMessage } from "../../utils/errors";
 import type { OrderSide, OrderType } from "../types";
 import { LighterHttpClient } from "./http-client";
 import { HttpNonceManager } from "./nonce-manager";
 import { LighterSigner, type CreateOrderSignParams } from "./signer";
-import { bytesToHex } from "./bytes";
 import type {
   LighterAccountDetails,
   LighterAccountAsset,
@@ -39,7 +37,6 @@ import {
   LIGHTER_HOSTS,
   LIGHTER_ORDER_TYPE,
   LIGHTER_TIME_IN_FORCE,
-  DEFAULT_ORDER_EXPIRY_PLACEHOLDER,
   IMMEDIATE_OR_CANCEL_EXPIRY_PLACEHOLDER,
   type LighterEnvironment,
 } from "./constants";
@@ -2210,7 +2207,7 @@ function extractJsonRequestId(message: any): string | null {
 function tryParseTxInfo(value: string): unknown {
   try {
     return JSON.parse(value);
-  } catch (_) {
+  } catch {
     return value;
   }
 }

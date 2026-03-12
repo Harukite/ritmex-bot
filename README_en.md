@@ -222,6 +222,8 @@ Please keep these credentials safe and do not share them with anyone.
 bun run index.ts   # Launch the CLI (default entrypoint)
 bun run start      # Alias for bun run index.ts
 bun run dev        # Development entrypoint
+bun run lint       # Run Oxlint checks
+bun run lint:fix   # Apply safe Oxlint fixes
 bun x vitest run   # Execute the full Vitest suite
 ```
 
@@ -288,6 +290,8 @@ Run `pm2 save` afterwards if you want the process list to survive reboots.
 ## Testing
 Powered by Vitest:
 ```bash
+bun run lint
+bun run lint:fix
 bun run test
 bun x vitest --watch
 ```

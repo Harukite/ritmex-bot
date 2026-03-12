@@ -409,7 +409,7 @@ export class BasisArbEngine {
       if (!Number.isFinite(wallet) || !Number.isFinite(available)) continue;
       if (Math.abs(wallet) === 0 && Math.abs(available) === 0) continue;
 
-      const isTaggedFuturesAsset = /0$/.test(name);
+      const isTaggedFuturesAsset = name.endsWith("0");
       if (isTaggedFuturesAsset) {
         futuresBalances.push({ asset: name.replace(/0$/, ""), wallet, available });
         continue;

@@ -461,7 +461,7 @@ export class GridEngine {
     return false;
   }
 
-  private async haltGrid(price: number): Promise<void> {
+  private async haltGrid(_price: number): Promise<void> {
     if (!this.running) return;
     const reason = this.stopReason ?? "触发网格止损";
     this.log("warn", `${reason}，开始执行平仓与撤单`);

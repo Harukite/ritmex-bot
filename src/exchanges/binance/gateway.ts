@@ -1,9 +1,6 @@
 import ccxt, {
   type Balances,
   type Order as CcxtOrder,
-  type OrderBook as CcxtOrderBook,
-  type OHLCV as CcxtOhlcv,
-  type Ticker as CcxtTicker,
 } from "ccxt";
 import axios from "axios";
 import { createHash } from "crypto";

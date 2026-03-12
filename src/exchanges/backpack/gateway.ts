@@ -7,7 +7,6 @@ import ccxt, {
 import NodeWebSocket from "ws";
 import { sign, utils as edUtils, hashes as edHashes } from "@noble/ed25519";
 import { sha512 } from "@noble/hashes/sha512";
-import { randomBytes } from "crypto";
 import type {
   AsterAccountSnapshot,
   AsterAccountPosition,
@@ -137,17 +136,16 @@ export class BackpackGateway {
   }
 
   private async doInitialize(symbol?: string): Promise<void> {
-    try {
-      await this.exchange.loadMarkets();
-      const requested = (symbol ?? this.symbol).toUpperCase();
-      const market = this.findMarket(requested);
-      if (!market) {
-        throw new Error(`Symbol ${requested} not found in Backpack markets`);
-      }
-      this.market = market;
-      this.marketSymbol = market.symbol;
-      this.marketId = market.id;
-      this.isContractMarket = Boolean(market.contract);
+    await this.exchange.loadMarkets();
+    const requested = (symbol ?? this.symbol).toUpperCase();
+    const market = this.findMarket(requested);
+    if (!market) {
+      throw new Error(`Symbol ${requested} not found in Backpack markets`);
+    }
+    this.market = market;
+    this.marketSymbol = market.symbol;
+    this.marketId = market.id;
+    this.isContractMarket = Boolean(market.contract);
     if (process.env.BACKPACK_DEBUG === "1") {
       console.debug("[BackpackGateway] marketInfo", {
         userSymbol: this.symbol,
@@ -155,10 +153,7 @@ export class BackpackGateway {
         marketId: this.marketId,
       });
     }
-      this.initialized = true;
-    } catch (error) {
-      throw error;
-    }
+    this.initialized = true;
   }
 
   private findMarket(requested: string): any | null {
@@ -774,7 +769,7 @@ export class BackpackGateway {
     void this.resubscribeAllTopics();
   };
 
-  private handleWsClose = (event: any): void => {
+  private handleWsClose = (_event: any): void => {
     if (this.wsCleanup) {
       try {
         this.wsCleanup();

@@ -386,7 +386,7 @@ export class TrendEngine {
   private async enforceRateLimitStop(): Promise<void> {
     const position = getPosition(this.accountSnapshot, this.config.symbol);
     if (Math.abs(position.positionAmt) < 1e-5) return;
-    const price = this.getReferencePrice() ?? Number(this.tickerSnapshot?.lastPrice) ?? this.lastPrice;
+    const price = this.getReferencePrice();
     if (!Number.isFinite(price) || price == null) return;
     const result = await this.handlePositionManagement(position, Number(price));
     if (result.closed) {
