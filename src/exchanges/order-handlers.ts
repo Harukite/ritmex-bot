@@ -45,6 +45,9 @@ function applyCommonFields(params: CreateOrderParams, intent: BaseOrderIntent): 
   if (intent.closePosition !== undefined) {
     params.closePosition = toStringBoolean(intent.closePosition);
   }
+  if (intent.clientOrderId !== undefined) {
+    params.clientOrderId = intent.clientOrderId;
+  }
   return params;
 }
 

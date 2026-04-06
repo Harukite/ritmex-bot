@@ -130,10 +130,10 @@ export class DryRunExchangeAdapter implements ExchangeAdapter {
 
 function createSyntheticOrder(params: CreateOrderParams, counter: number): Order {
   const now = Date.now();
-  const orderId = `dry-run-${now}-${counter}`;
+  const orderId = params.clientOrderId ?? `dry-run-${now}-${counter}`;
   return {
     orderId,
-    clientOrderId: orderId,
+    clientOrderId: params.clientOrderId ?? orderId,
     symbol: params.symbol,
     side: params.side,
     type: params.type,

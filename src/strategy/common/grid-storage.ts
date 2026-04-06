@@ -5,6 +5,19 @@ import type { GridDirection } from "../../config";
 const DATA_DIR = process.env.GRID_DATA_DIR?.trim() || path.resolve("data");
 const GRID_FILE = path.resolve(DATA_DIR, "grid-record.json");
 
+/** State of a single grid level */
+export type LevelState = "idle" | "filled" | "exit_placed";
+
+export interface StoredLevelInfo {
+  state: LevelState;
+  /** The grid level index where ENTRY was filled */
+  sourceLevel: number;
+  /** The grid level index where EXIT is targeted (closeTarget) */
+  targetLevel: number | null;
+  /** The orderId of the EXIT order on exchange (if exit_placed) */
+  exitOrderId?: string;
+}
+
 export interface StoredGridState {
   symbol: string;
   lowerPrice: number;
@@ -13,8 +26,8 @@ export interface StoredGridState {
   orderSize: number;
   maxPositionSize: number;
   direction: GridDirection;
-  longExposure: Record<string, number>;
-  shortExposure: Record<string, number>;
+  /** Per-level state: key is level index string */
+  levels: Record<string, StoredLevelInfo>;
   updatedAt: number;
 }
 

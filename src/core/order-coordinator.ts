@@ -134,6 +134,7 @@ type PlaceOrderOptions = {
   skipDedupe?: boolean;
   slPrice?: number;
   tpPrice?: number;
+  clientOrderId?: string;
 };
 
 export async function placeOrder(
@@ -180,6 +181,7 @@ export async function placeOrder(
       closePosition,
       slPrice: opts?.slPrice,
       tpPrice: opts?.tpPrice,
+      clientOrderId: opts?.clientOrderId,
     });
     pendings[type] = String(order.orderId);
     log("order", `挂限价单: ${side} @ ${priceNum} 数量 ${quantity} reduceOnly=${reduceOnly}${opts?.slPrice ? ` sl=${opts.slPrice}` : ""}`);

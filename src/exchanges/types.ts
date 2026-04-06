@@ -27,6 +27,7 @@ export interface CreateOrderParams {
   triggerType?: "UNSPECIFIED" | "TAKE_PROFIT" | "STOP_LOSS";
   slPrice?: number;
   tpPrice?: number;
+  clientOrderId?: string;
 }
 
 export interface AccountPosition {

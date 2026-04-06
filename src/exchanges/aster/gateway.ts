@@ -815,6 +815,7 @@ export class AsterRestClient {
     if (params.activationPrice !== undefined) payload.activationPrice = params.activationPrice;
     if (params.callbackRate !== undefined) payload.callbackRate = params.callbackRate;
     if (params.quantity !== undefined) payload.quantity = Math.abs(params.quantity);
+    if (params.clientOrderId !== undefined) payload.newClientOrderId = params.clientOrderId;
 
     // Aster rejects reduceOnly/closePosition for certain order types (e.g. STOP/TRAILING).
     // Keep the behavior exchange-specific by stripping them here for Aster.

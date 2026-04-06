@@ -487,6 +487,9 @@ export class BinanceGateway {
     if (params.callbackRate != null) {
       extra.callbackRate = params.callbackRate;
     }
+    if (params.clientOrderId != null) {
+      extra.newClientOrderId = params.clientOrderId;
+    }
 
     if (market.kind === "perp") {
       if (params.reduceOnly != null) {
