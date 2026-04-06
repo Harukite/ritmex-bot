@@ -6,7 +6,7 @@
 
 - 安装依赖: `bun install`
 - 运行脚本: `bun run <script>`
-- 执行测试: `bun test`
+- 执行测试: `bun run test`（即 `bun x vitest run`，不要用 `bun test`）
 - 类型检查: `bun run typecheck`
 
 **不要使用 npm、yarn 或 npx**
