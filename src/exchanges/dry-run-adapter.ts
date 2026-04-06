@@ -11,8 +11,8 @@ import type {
   TickerListener,
 } from "./adapter";
 import type {
-  AsterAccountSnapshot,
-  AsterOrder,
+  AccountSnapshot,
+  Order,
   CreateOrderParams,
 } from "./types";
 
@@ -66,7 +66,7 @@ export class DryRunExchangeAdapter implements ExchangeAdapter {
     this.inner.watchFundingRate(symbol, cb);
   }
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
     this.record("createOrder", params);
     return createSyntheticOrder(params, ++this.syntheticCounter);
   }
@@ -104,12 +104,12 @@ export class DryRunExchangeAdapter implements ExchangeAdapter {
     this.inner.offRestHealthEvent?.(listener);
   }
 
-  async queryOpenOrders(): Promise<AsterOrder[]> {
+  async queryOpenOrders(): Promise<Order[]> {
     if (!this.inner.queryOpenOrders) return [];
     return this.inner.queryOpenOrders();
   }
 
-  async queryAccountSnapshot(): Promise<AsterAccountSnapshot | null> {
+  async queryAccountSnapshot(): Promise<AccountSnapshot | null> {
     if (!this.inner.queryAccountSnapshot) return null;
     return this.inner.queryAccountSnapshot();
   }
@@ -128,7 +128,7 @@ export class DryRunExchangeAdapter implements ExchangeAdapter {
   }
 }
 
-function createSyntheticOrder(params: CreateOrderParams, counter: number): AsterOrder {
+function createSyntheticOrder(params: CreateOrderParams, counter: number): Order {
   const now = Date.now();
   const orderId = `dry-run-${now}-${counter}`;
   return {

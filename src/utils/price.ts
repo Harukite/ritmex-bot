@@ -1,6 +1,6 @@
-import type { AsterDepth, AsterTicker } from "../exchanges/types";
+import type { Depth, Ticker } from "../exchanges/types";
 
-export function getTopPrices(depth?: AsterDepth | null): { topBid: number | null; topAsk: number | null } {
+export function getTopPrices(depth?: Depth | null): { topBid: number | null; topAsk: number | null } {
   const bid = Number(depth?.bids?.[0]?.[0]);
   const ask = Number(depth?.asks?.[0]?.[0]);
   return {
@@ -16,7 +16,7 @@ export function getTopPrices(depth?: AsterDepth | null): { topBid: number | null
  * @returns 指定档位的买卖价格，如果该档位不存在则回退到最近的有效档位
  */
 export function getPricesAtLevel(
-  depth?: AsterDepth | null,
+  depth?: Depth | null,
   level: number = 1
 ): { bidAtLevel: number | null; askAtLevel: number | null } {
   const index = Math.max(0, level - 1);
@@ -49,7 +49,7 @@ export function getPricesAtLevel(
   return { bidAtLevel, askAtLevel };
 }
 
-export function getMidOrLast(depth?: AsterDepth | null, ticker?: AsterTicker | null): number | null {
+export function getMidOrLast(depth?: Depth | null, ticker?: Ticker | null): number | null {
   const { topBid, topAsk } = getTopPrices(depth);
   if (topBid != null && topAsk != null) return (topBid + topAsk) / 2;
   const last = Number(ticker?.lastPrice);
@@ -64,7 +64,7 @@ export function getMidOrLast(depth?: AsterDepth | null, ticker?: AsterTicker | n
  * @returns 从一档到目标价格之间的挂单总量 (不包含目标价格本身)
  */
 export function getDepthBetweenPrices(
-  depth: AsterDepth | null | undefined,
+  depth: Depth | null | undefined,
   side: "BUY" | "SELL",
   targetPrice: number
 ): number {

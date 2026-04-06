@@ -1,6 +1,6 @@
 import type { GridConfig, GridDirection } from "../config";
 import type { ExchangeAdapter } from "../exchanges/adapter";
-import type { AsterAccountSnapshot, AsterDepth, AsterOrder, AsterTicker } from "../exchanges/types";
+import type { AccountSnapshot, Depth, Order, Ticker } from "../exchanges/types";
 import { createTradeLog, type TradeLogEntry } from "../logging/trade-log";
 import { decimalsOf } from "../utils/math";
 import { extractMessage } from "../utils/errors";
@@ -51,7 +51,7 @@ export interface GridEngineSnapshot {
   midPrice: number | null;
   gridLines: GridLineSnapshot[];
   desiredOrders: DesiredGridOrder[];
-  openOrders: AsterOrder[];
+  openOrders: Order[];
   position: PositionSnapshot;
   running: boolean;
   stopReason: string | null;
@@ -115,10 +115,10 @@ export class GridEngine {
   private lastAbsPositionAmt = 0;
   private immediateCloseToPlace: Array<{ sourceLevel: number; targetLevel: number; side: "BUY" | "SELL"; price: string }> = [];
 
-  private accountSnapshot: AsterAccountSnapshot | null = null;
-  private depthSnapshot: AsterDepth | null = null;
-  private tickerSnapshot: AsterTicker | null = null;
-  private openOrders: AsterOrder[] = [];
+  private accountSnapshot: AccountSnapshot | null = null;
+  private depthSnapshot: Depth | null = null;
+  private tickerSnapshot: Ticker | null = null;
+  private openOrders: Order[] = [];
 
   private position: PositionSnapshot = { positionAmt: 0, entryPrice: 0, unrealizedProfit: 0, markPrice: null };
   private desiredOrders: DesiredGridOrder[] = [];
@@ -277,7 +277,7 @@ export class GridEngine {
   private bootstrap(): void {
     const log: LogHandler = (type, detail) => this.tradeLog.push(type, detail);
 
-    safeSubscribe<AsterAccountSnapshot>(
+    safeSubscribe<AccountSnapshot>(
       this.exchange.watchAccount.bind(this.exchange),
       (snapshot) => {
         this.accountSnapshot = snapshot;
@@ -301,7 +301,7 @@ export class GridEngine {
       }
     );
 
-    safeSubscribe<AsterOrder[]>(
+    safeSubscribe<Order[]>(
       this.exchange.watchOrders.bind(this.exchange),
       (orders) => {
         this.openOrders = Array.isArray(orders)
@@ -327,7 +327,7 @@ export class GridEngine {
       }
     );
 
-    safeSubscribe<AsterDepth>(
+    safeSubscribe<Depth>(
       this.exchange.watchDepth.bind(this.exchange, this.config.symbol),
       (depth) => {
         this.depthSnapshot = depth;
@@ -345,7 +345,7 @@ export class GridEngine {
       }
     );
 
-    safeSubscribe<AsterTicker>(
+    safeSubscribe<Ticker>(
       this.exchange.watchTicker.bind(this.exchange, this.config.symbol),
       (ticker) => {
         this.tickerSnapshot = ticker;
@@ -366,7 +366,7 @@ export class GridEngine {
     );
   }
 
-  private synchronizeLocks(orders: AsterOrder[] | null | undefined): void {
+  private synchronizeLocks(orders: Order[] | null | undefined): void {
     const list = Array.isArray(orders) ? orders : [];
     const FINAL = new Set(["FILLED", "CANCELED", "CANCELLED", "REJECTED", "EXPIRED"]);
     Object.keys(this.pendings).forEach((type) => {
@@ -619,7 +619,7 @@ export class GridEngine {
 
     const activeOrders = this.openOrders.filter((o) => this.isActiveLimitOrder(o));
     // Build lookup for all recent orders by id (including non-active) to read final statuses
-    const allOrdersById = new Map<string, AsterOrder>();
+    const allOrdersById = new Map<string, Order>();
     for (const o of this.openOrders) {
       if (o.symbol !== this.config.symbol) continue;
       allOrdersById.set(String(o.orderId), o);
@@ -1187,7 +1187,7 @@ export class GridEngine {
     return `${side}:${price}:${intent}`;
   }
 
-  private isActiveLimitOrder(o: AsterOrder): boolean {
+  private isActiveLimitOrder(o: Order): boolean {
     if (o.symbol !== this.config.symbol) return false;
     if (o.type !== "LIMIT") return false;
     const s = String(o.status || "").toUpperCase();

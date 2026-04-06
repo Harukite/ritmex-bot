@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { getDepthBetweenPrices } from "../src/utils/price";
-import type { AsterDepth } from "../src/exchanges/types";
+import type { Depth } from "../src/exchanges/types";
 
 describe("getDepthBetweenPrices boundary", () => {
   it("SELL side excludes quantity exactly at target price", () => {
-    const depth: AsterDepth = {
+    const depth: Depth = {
       lastUpdateId: 1,
       bids: [],
       asks: [
@@ -20,7 +20,7 @@ describe("getDepthBetweenPrices boundary", () => {
   });
 
   it("BUY side excludes quantity exactly at target price", () => {
-    const depth: AsterDepth = {
+    const depth: Depth = {
       lastUpdateId: 1,
      bids: [
         ["69355", "1"],

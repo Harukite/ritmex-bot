@@ -8,12 +8,12 @@ import NodeWebSocket from "ws";
 import { sign, utils as edUtils, hashes as edHashes } from "@noble/ed25519";
 import { sha512 } from "@noble/hashes/sha512";
 import type {
-  AsterAccountSnapshot,
-  AsterAccountPosition,
-  AsterOrder,
-  AsterDepth,
-  AsterTicker,
-  AsterKline,
+  AccountSnapshot,
+  AccountPosition,
+  Order,
+  Depth,
+  Ticker,
+  Kline,
   CreateOrderParams,
   OrderType,
 } from "../types";
@@ -92,8 +92,8 @@ export class BackpackGateway {
   private tickerPollTimer: ReturnType<typeof setInterval> | null = null;
   private readonly klinePollTimers = new Map<string, ReturnType<typeof setInterval>>();
 
-  private readonly localOrders = new Map<string, AsterOrder>();
-  private lastBalanceSnapshot: AsterAccountSnapshot | null = null;
+  private readonly localOrders = new Map<string, Order>();
+  private lastBalanceSnapshot: AccountSnapshot | null = null;
   private marketId = "";
 
   private ws: WebSocket | null = null;
@@ -244,7 +244,7 @@ export class BackpackGateway {
           this.exchange.fetchOpenOrders(this.marketSymbol),
           this.exchange.fetchOrders(this.marketSymbol, undefined, 200, {}),
         ]);
-        const active = new Map<string, AsterOrder>();
+        const active = new Map<string, Order>();
         for (const entry of [...openOrders, ...allOrders]) {
           const status = this.normalizeStatus(entry.status ?? (entry.info?.status as string));
           if (this.isTerminalStatus(status)) continue;
@@ -315,7 +315,7 @@ export class BackpackGateway {
 
   // ---- Order actions -----------------------------------------------------
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
     await this.ensureInitialized();
     const symbol = this.marketSymbol;
     const normalizedType = this.normalizeOrderType(params.type);
@@ -399,11 +399,11 @@ export class BackpackGateway {
 
   // ---- Mapping helpers ---------------------------------------------------
 
-  private mapBalanceToAccountSnapshot(balance: Balances): AsterAccountSnapshot {
+  private mapBalanceToAccountSnapshot(balance: Balances): AccountSnapshot {
     return this.mapBalanceToAccountSnapshotWithPositions(balance, []);
   }
 
-  private async fetchAccountSnapshot(): Promise<AsterAccountSnapshot> {
+  private async fetchAccountSnapshot(): Promise<AccountSnapshot> {
     await this.ensureInitialized();
     const [balance, positions] = await Promise.all([
       this.exchange.fetchBalance(),
@@ -417,7 +417,7 @@ export class BackpackGateway {
     return this.mapBalanceToAccountSnapshotWithPositions(balance, positions ?? []);
   }
 
-  private mapBalanceToAccountSnapshotWithPositions(balance: Balances, rawPositions: any[]): AsterAccountSnapshot {
+  private mapBalanceToAccountSnapshotWithPositions(balance: Balances, rawPositions: any[]): AccountSnapshot {
     const now = Date.now();
     const assets = this.normalizeAssets(balance, now);
     const positions = this.normalizePositions(rawPositions, now);
@@ -425,7 +425,7 @@ export class BackpackGateway {
     const totalUnrealized = this.sumStrings(positions.map((position) => position.unrealizedProfit ?? "0"));
     const availableBalance = this.sumStrings(assets.map((asset) => asset.availableBalance));
 
-    const snapshot: AsterAccountSnapshot = {
+    const snapshot: AccountSnapshot = {
       canTrade: true,
       canDeposit: true,
       canWithdraw: true,
@@ -447,9 +447,9 @@ export class BackpackGateway {
     return snapshot;
   }
 
-  private normalizeAssets(balance: Balances, now: number): AsterAccountSnapshot["assets"] {
+  private normalizeAssets(balance: Balances, now: number): AccountSnapshot["assets"] {
     const metaKeys = new Set(["free", "used", "total", "info", "timestamp", "datetime", "debt"]);
-    const assets: AsterAccountSnapshot["assets"] = [];
+    const assets: AccountSnapshot["assets"] = [];
     for (const [currency, value] of Object.entries(balance)) {
       if (metaKeys.has(currency)) continue;
       if (!value || typeof value !== "object") continue;
@@ -460,9 +460,9 @@ export class BackpackGateway {
     return assets;
   }
 
-  private normalizePositions(rawPositions: any[], now: number): AsterAccountSnapshot["positions"] {
+  private normalizePositions(rawPositions: any[], now: number): AccountSnapshot["positions"] {
     if (!Array.isArray(rawPositions)) return [];
-    const positions: AsterAccountSnapshot["positions"] = [];
+    const positions: AccountSnapshot["positions"] = [];
     for (const raw of rawPositions) {
       const info = raw?.info ?? raw ?? {};
       const quantity = this.toNumber(raw?.contracts ?? info.netExposureQuantity ?? info.netQuantity);
@@ -493,7 +493,7 @@ export class BackpackGateway {
     return positions;
   }
 
-  private mapOrderBookToDepth(orderbook: CcxtOrderBook): AsterDepth {
+  private mapOrderBookToDepth(orderbook: CcxtOrderBook): Depth {
     return {
       lastUpdateId: orderbook.nonce || Date.now(),
       bids: (orderbook.bids ?? [])
@@ -506,7 +506,7 @@ export class BackpackGateway {
     };
   }
 
-  private mapTickerToAsterTicker(ticker: CcxtTicker): AsterTicker {
+  private mapTickerToAsterTicker(ticker: CcxtTicker): Ticker {
     return {
       symbol: ticker.symbol,
       lastPrice: ticker.last?.toString() ?? "0",
@@ -522,7 +522,7 @@ export class BackpackGateway {
   private mapOHLCVToKline(
     candle: [number, number, number, number, number, number],
     interval: string
-  ): AsterKline {
+  ): Kline {
     const [openTime, open, high, low, close, volume] = candle;
     return {
       openTime,
@@ -536,7 +536,7 @@ export class BackpackGateway {
     };
   }
 
-  private mapRestOrder(order: CcxtOrder): AsterOrder {
+  private mapRestOrder(order: CcxtOrder): Order {
     const info = (order.info ?? {}) as Record<string, unknown>;
     const side = (order.side ?? "buy").toUpperCase() as "BUY" | "SELL";
     let type = this.normalizeOrderType(order.type ?? (info.o as string)) as OrderType;
@@ -579,7 +579,7 @@ export class BackpackGateway {
     };
   }
 
-  private mapWsOrder(data: Record<string, unknown>): AsterOrder {
+  private mapWsOrder(data: Record<string, unknown>): Order {
     const sideRaw = String(data.S ?? "").toUpperCase();
     const side: "BUY" | "SELL" = sideRaw === "BID" ? "BUY" : "SELL";
     const triggerPresent = data.P != null || data.B != null;
@@ -626,7 +626,7 @@ export class BackpackGateway {
     }
   }
 
-  private mapWsPosition(data: Record<string, unknown>): AsterAccountPosition | null {
+  private mapWsPosition(data: Record<string, unknown>): AccountPosition | null {
     const quantityRaw = data.q ?? data.Q;
     const qty = Number(this.toStringAmount(quantityRaw));
     if (!Number.isFinite(qty)) return null;
@@ -651,8 +651,8 @@ export class BackpackGateway {
     };
   }
 
-  private mergeWsPosition(position: AsterAccountPosition): void {
-    const snapshot: AsterAccountSnapshot = this.lastBalanceSnapshot
+  private mergeWsPosition(position: AccountPosition): void {
+    const snapshot: AccountSnapshot = this.lastBalanceSnapshot
       ? {
           ...this.lastBalanceSnapshot,
           positions: this.lastBalanceSnapshot.positions ? [...this.lastBalanceSnapshot.positions] : [],
@@ -692,7 +692,7 @@ export class BackpackGateway {
   this.emitAccount(snapshot);
   }
 
-  private emitAccount(snapshot: AsterAccountSnapshot): void {
+  private emitAccount(snapshot: AccountSnapshot): void {
     for (const listener of this.accountListeners) {
       try {
         listener(snapshot);

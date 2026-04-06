@@ -8,12 +8,12 @@ import type {
   TickerListener,
 } from "../adapter";
 import type {
-  AsterAccountAsset,
-  AsterAccountSnapshot,
-  AsterDepth,
-  AsterKline,
-  AsterOrder,
-  AsterTicker,
+  AccountAsset,
+  AccountSnapshot,
+  Depth,
+  Kline,
+  Order,
+  Ticker,
   CreateOrderParams,
 } from "../types";
 import type { OrderSide, OrderType } from "../types";
@@ -189,12 +189,12 @@ export class LighterGateway {
   private accountPollInFlight = false;
   private ordersResyncTimer: ReturnType<typeof setInterval> | null = null;
   private ordersResyncInFlight = false;
-  private readonly klineCache = new Map<string, AsterKline[]>();
-  private readonly accountEvent = createEvent<AsterAccountSnapshot>();
-  private readonly ordersEvent = createEvent<AsterOrder[]>();
-  private readonly depthEvent = createEvent<AsterDepth>();
-  private readonly tickerEvent = createEvent<AsterTicker>();
-  private readonly klinesEvent = createEvent<AsterKline[]>();
+  private readonly klineCache = new Map<string, Kline[]>();
+  private readonly accountEvent = createEvent<AccountSnapshot>();
+  private readonly ordersEvent = createEvent<Order[]>();
+  private readonly depthEvent = createEvent<Depth>();
+  private readonly tickerEvent = createEvent<Ticker>();
+  private readonly klinesEvent = createEvent<Kline[]>();
   private readonly auth = { token: null as string | null, expiresAt: 0 };
   private readonly l1Address: string | null;
   private loggedCreateOrderPayload = false;
@@ -359,8 +359,8 @@ export class LighterGateway {
     this.klinesEvent.add(handler);
   }
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
-    const run = async (): Promise<AsterOrder> => {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
+    const run = async (): Promise<Order> => {
       await this.ensureInitialized();
       const conversion = this.mapCreateOrderParams(params);
       const { baseAmountScaledString, priceScaledString, triggerPriceScaledString, ...signParams } = conversion;
@@ -1710,7 +1710,7 @@ export class LighterGateway {
     const bestAsk = getBestPrice(this.orderBook.asks, "ask");
     if (bestBid == null && bestAsk == null) return;
     const last = bestBid != null && bestAsk != null ? (bestBid + bestAsk) / 2 : (bestBid ?? bestAsk ?? 0);
-    const ticker: AsterTicker = {
+    const ticker: Ticker = {
       symbol: this.displaySymbol,
       eventType: "lighterSyntheticTicker",
       eventTime: Date.now(),
@@ -1736,10 +1736,10 @@ export class LighterGateway {
     this.tickerEvent.emit(ticker);
   }
 
-  private buildAccountAssets(): AsterAccountAsset[] {
+  private buildAccountAssets(): AccountAsset[] {
     if (!this.assets.size) return [];
     const now = Date.now();
-    const list: AsterAccountAsset[] = [];
+    const list: AccountAsset[] = [];
     for (const asset of this.assets.values()) {
       const balanceNum = parseNumber(asset.balance);
       const lockedNum = parseNumber(asset.locked_balance ?? 0);
@@ -2039,7 +2039,7 @@ function mergeLevels(existing: LighterOrderBookLevel[], updates: LighterOrderBoo
   return Array.from(map.entries()).map(([price, size]) => ({ price, size } as LighterOrderBookLevel));
 }
 
-function cloneKlines(klines: AsterKline[]): AsterKline[] {
+function cloneKlines(klines: Kline[]): Kline[] {
   return klines.map((kline) => ({ ...kline }));
 }
 

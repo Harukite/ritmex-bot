@@ -18,11 +18,11 @@ import {
 import { buildAdapterFromEnv } from "../src/exchanges/resolve-from-env";
 import type { ExchangeAdapter } from "../src/exchanges/adapter";
 import type {
-  AsterAccountSnapshot,
-  AsterDepth,
-  AsterKline,
-  AsterOrder,
-  AsterTicker,
+  AccountSnapshot,
+  Depth,
+  Kline,
+  Order,
+  Ticker,
   CreateOrderParams,
 } from "../src/exchanges/types";
 
@@ -78,17 +78,17 @@ class RecorderAdapter implements ExchangeAdapter {
     return false;
   }
 
-  watchAccount(_cb: (snapshot: AsterAccountSnapshot) => void): void {}
+  watchAccount(_cb: (snapshot: AccountSnapshot) => void): void {}
 
-  watchOrders(_cb: (orders: AsterOrder[]) => void): void {}
+  watchOrders(_cb: (orders: Order[]) => void): void {}
 
-  watchDepth(_symbol: string, _cb: (depth: AsterDepth) => void): void {}
+  watchDepth(_symbol: string, _cb: (depth: Depth) => void): void {}
 
-  watchTicker(_symbol: string, _cb: (ticker: AsterTicker) => void): void {}
+  watchTicker(_symbol: string, _cb: (ticker: Ticker) => void): void {}
 
-  watchKlines(_symbol: string, _interval: string, _cb: (klines: AsterKline[]) => void): void {}
+  watchKlines(_symbol: string, _interval: string, _cb: (klines: Kline[]) => void): void {}
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
     this.lastCreateOrderParams = params;
     return {
       orderId: 1,

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { computeBollingerBandwidth, getPosition, getSMA } from "../src/utils/strategy";
-import type { AsterAccountSnapshot, AsterKline } from "../src/exchanges/types";
+import type { AccountSnapshot, Kline } from "../src/exchanges/types";
 
-const mockSnapshot = (positions: Array<{ symbol: string; amt: number; entry: number; pnl: number }> = []): AsterAccountSnapshot => ({
+const mockSnapshot = (positions: Array<{ symbol: string; amt: number; entry: number; pnl: number }> = []): AccountSnapshot => ({
   canTrade: true,
   canDeposit: true,
   canWithdraw: true,
@@ -20,7 +20,7 @@ const mockSnapshot = (positions: Array<{ symbol: string; amt: number; entry: num
   assets: [],
 });
 
-const mockKlines = (values: number[]): AsterKline[] =>
+const mockKlines = (values: number[]): Kline[] =>
   values.map((value, index) => ({
     openTime: index,
     open: String(value),

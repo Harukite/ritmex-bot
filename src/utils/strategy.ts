@@ -1,4 +1,4 @@
-import type { AsterAccountAsset, AsterAccountSnapshot, AsterKline } from "../exchanges/types";
+import type { AccountAsset, AccountSnapshot, Kline } from "../exchanges/types";
 
 export interface PositionSnapshot {
   positionAmt: number;
@@ -7,7 +7,7 @@ export interface PositionSnapshot {
   markPrice: number | null;
 }
 
-export function getPosition(snapshot: AsterAccountSnapshot | null, symbol: string): PositionSnapshot {
+export function getPosition(snapshot: AccountSnapshot | null, symbol: string): PositionSnapshot {
   if (!snapshot) {
     return { positionAmt: 0, entryPrice: 0, unrealizedProfit: 0, markPrice: null };
   }
@@ -48,7 +48,7 @@ export function getPosition(snapshot: AsterAccountSnapshot | null, symbol: strin
 }
 
 export function validateAccountSnapshotForSymbol(
-  snapshot: AsterAccountSnapshot | null,
+  snapshot: AccountSnapshot | null,
   symbol: string
 ): { ok: true } | { ok: false; issues: string[] } {
   if (!snapshot) return { ok: true };
@@ -88,7 +88,7 @@ export function validateAccountSnapshotForSymbol(
   return { ok: false, issues: Array.from(new Set(issues)) };
 }
 
-export function getSMA(values: AsterKline[], length: number): number | null {
+export function getSMA(values: Kline[], length: number): number | null {
   if (!Array.isArray(values) || values.length < length) return null;
   const window = values.slice(-length);
   const closes = window.map((kline) => Number(kline.close));
@@ -118,7 +118,7 @@ export function calcTrailingActivationPrice(entryPrice: number, qty: number, sid
 }
 
 export function computeBollingerBandwidth(
-  values: AsterKline[],
+  values: Kline[],
   length: number,
   stdMultiplier: number
 ): number | null {
@@ -190,7 +190,7 @@ function normalizeBaseSymbol(symbol: string | undefined): string | undefined {
   return parseSymbolParts(symbol).base;
 }
 
-function selectAsset(assets: AsterAccountAsset[], baseSymbol: string, baseAssetId?: number): AsterAccountAsset | undefined {
+function selectAsset(assets: AccountAsset[], baseSymbol: string, baseAssetId?: number): AccountAsset | undefined {
   const normalized = baseSymbol.toUpperCase();
   const targetId = Number(baseAssetId);
   return assets.find((asset) => {

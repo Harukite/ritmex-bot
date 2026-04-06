@@ -23,12 +23,12 @@ import type {
   IOrder,
 } from "@grvt/client/interfaces";
 import type {
-  AsterAccountSnapshot,
-  AsterAccountPosition,
-  AsterDepth,
-  AsterKline,
-  AsterOrder,
-  AsterTicker,
+  AccountSnapshot,
+  AccountPosition,
+  Depth,
+  Kline,
+  Order,
+  Ticker,
   CreateOrderParams,
   OrderSide,
   GrvtSignedOrder,
@@ -172,7 +172,7 @@ interface HostsConfig {
 
 interface KlineCache {
   interval: string;
-  values: AsterKline[];
+  values: Kline[];
 }
 
 interface InstrumentInfo {
@@ -215,12 +215,12 @@ export class GrvtGateway {
   private instrumentInfo: InstrumentInfo | null = null;
   private sessionPromise: Promise<void> | null = null;
 
-  private accountSnapshot: AsterAccountSnapshot | null = null;
-  private openOrders: AsterOrder[] = [];
-  private positions: AsterAccountPosition[] = [];
+  private accountSnapshot: AccountSnapshot | null = null;
+  private openOrders: Order[] = [];
+  private positions: AccountPosition[] = [];
   private lastPositionsUpdateAt: number = 0;
-  private depthSnapshot: AsterDepth | null = null;
-  private tickerSnapshot: AsterTicker | null = null;
+  private depthSnapshot: Depth | null = null;
+  private tickerSnapshot: Ticker | null = null;
   private klineCache: KlineCache | null = null;
 
   // WebSocket state
@@ -228,11 +228,11 @@ export class GrvtGateway {
   private wsConnected = false;
   private positionsRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 
-  private accountListeners = new Set<(snapshot: AsterAccountSnapshot) => void>();
-  private ordersListeners = new Set<(orders: AsterOrder[]) => void>();
-  private depthListeners = new Set<(depth: AsterDepth) => void>();
-  private tickerListeners = new Set<(ticker: AsterTicker) => void>();
-  private klineListeners = new Set<(klines: AsterKline[]) => void>();
+  private accountListeners = new Set<(snapshot: AccountSnapshot) => void>();
+  private ordersListeners = new Set<(orders: Order[]) => void>();
+  private depthListeners = new Set<(depth: Depth) => void>();
+  private tickerListeners = new Set<(ticker: Ticker) => void>();
+  private klineListeners = new Set<(klines: Kline[]) => void>();
 
   private accountTimer: ReturnType<typeof setInterval> | null = null;
   private ordersTimer: ReturnType<typeof setInterval> | null = null;
@@ -316,7 +316,7 @@ export class GrvtGateway {
     this.initialized = true;
   }
 
-  onAccount(listener: (snapshot: AsterAccountSnapshot) => void): () => void {
+  onAccount(listener: (snapshot: AccountSnapshot) => void): () => void {
     this.accountListeners.add(listener);
     if (this.accountSnapshot) listener(cloneAccount(this.accountSnapshot));
     return () => {
@@ -324,7 +324,7 @@ export class GrvtGateway {
     };
   }
 
-  onOrders(listener: (orders: AsterOrder[]) => void): () => void {
+  onOrders(listener: (orders: Order[]) => void): () => void {
     this.ordersListeners.add(listener);
     if (this.openOrders.length) listener(cloneOrders(this.openOrders));
     return () => {
@@ -332,7 +332,7 @@ export class GrvtGateway {
     };
   }
 
-  onDepth(listener: (depth: AsterDepth) => void): () => void {
+  onDepth(listener: (depth: Depth) => void): () => void {
     this.depthListeners.add(listener);
     if (this.depthSnapshot) listener(cloneDepth(this.depthSnapshot));
     return () => {
@@ -340,7 +340,7 @@ export class GrvtGateway {
     };
   }
 
-  onTicker(listener: (ticker: AsterTicker) => void): () => void {
+  onTicker(listener: (ticker: Ticker) => void): () => void {
     this.tickerListeners.add(listener);
     if (this.tickerSnapshot) listener(cloneTicker(this.tickerSnapshot));
     return () => {
@@ -348,7 +348,7 @@ export class GrvtGateway {
     };
   }
 
-  onKlines(listener: (klines: AsterKline[]) => void): () => void {
+  onKlines(listener: (klines: Kline[]) => void): () => void {
     this.klineListeners.add(listener);
     if (this.klineCache) listener(cloneKlines(this.klineCache.values));
     return () => {
@@ -356,19 +356,19 @@ export class GrvtGateway {
     };
   }
 
-  getAccountSnapshot(): AsterAccountSnapshot | null {
+  getAccountSnapshot(): AccountSnapshot | null {
     return this.accountSnapshot ? cloneAccount(this.accountSnapshot) : null;
   }
 
-  getOpenOrders(): AsterOrder[] {
+  getOpenOrders(): Order[] {
     return cloneOrders(this.openOrders);
   }
 
-  getPositions(): AsterAccountPosition[] {
+  getPositions(): AccountPosition[] {
     return this.positions.map((position) => ({ ...position }));
   }
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
     if (params.type === "TRAILING_STOP_MARKET") {
       throw new Error(TRAILING_NOT_SUPPORTED_ERROR);
     }
@@ -660,7 +660,7 @@ export class GrvtGateway {
     this.emitKlines(klines);
   }
 
-  private mergeOrder(order: AsterOrder): void {
+  private mergeOrder(order: Order): void {
     const index = this.openOrders.findIndex((item) => String(item.orderId) === String(order.orderId));
     if (index >= 0) {
       this.openOrders[index] = order;
@@ -678,7 +678,7 @@ export class GrvtGateway {
     }
   }
 
-  private emitAccount(snapshot: AsterAccountSnapshot): void {
+  private emitAccount(snapshot: AccountSnapshot): void {
     const cloned = cloneAccount(snapshot);
     this.accountListeners.forEach((listener) => {
       try {
@@ -689,7 +689,7 @@ export class GrvtGateway {
     });
   }
 
-  private emitOrders(orders: AsterOrder[]): void {
+  private emitOrders(orders: Order[]): void {
     const cloned = cloneOrders(orders);
     this.ordersListeners.forEach((listener) => {
       try {
@@ -700,7 +700,7 @@ export class GrvtGateway {
     });
   }
 
-  private emitDepth(depth: AsterDepth): void {
+  private emitDepth(depth: Depth): void {
     const cloned = cloneDepth(depth);
     this.depthListeners.forEach((listener) => {
       try {
@@ -711,7 +711,7 @@ export class GrvtGateway {
     });
   }
 
-  private emitTicker(ticker: AsterTicker): void {
+  private emitTicker(ticker: Ticker): void {
     const cloned = cloneTicker(ticker);
     this.tickerListeners.forEach((listener) => {
       try {
@@ -722,7 +722,7 @@ export class GrvtGateway {
     });
   }
 
-  private emitKlines(klines: AsterKline[]): void {
+  private emitKlines(klines: Kline[]): void {
     const cloned = cloneKlines(klines);
     this.klineListeners.forEach((listener) => {
       try {
@@ -974,15 +974,15 @@ function normalizeHex(value: string): string {
   return `0x${trimmed.toLowerCase()}`;
 }
 
-function cloneAccount(snapshot: AsterAccountSnapshot): AsterAccountSnapshot {
+function cloneAccount(snapshot: AccountSnapshot): AccountSnapshot {
   return JSON.parse(JSON.stringify(snapshot));
 }
 
-function cloneOrders(orders: AsterOrder[]): AsterOrder[] {
+function cloneOrders(orders: Order[]): Order[] {
   return orders.map((order) => ({ ...order }));
 }
 
-function cloneDepth(depth: AsterDepth): AsterDepth {
+function cloneDepth(depth: Depth): Depth {
   return {
     ...depth,
     bids: depth.bids.map((level) => [...level] as [string, string]),
@@ -990,11 +990,11 @@ function cloneDepth(depth: AsterDepth): AsterDepth {
   };
 }
 
-function cloneTicker(ticker: AsterTicker): AsterTicker {
+function cloneTicker(ticker: Ticker): Ticker {
   return { ...ticker };
 }
 
-function cloneKlines(klines: AsterKline[]): AsterKline[] {
+function cloneKlines(klines: Kline[]): Kline[] {
   return klines.map((kline) => ({ ...kline }));
 }
 
@@ -1023,11 +1023,11 @@ function scaleDecimal(value: string | number | undefined, decimals: number): big
   return scaleDecimal(fixed.toFixed(decimals), decimals);
 }
 
-function sumUnrealized(positions: AsterAccountPosition[]): number {
+function sumUnrealized(positions: AccountPosition[]): number {
   return positions.reduce((total, position) => total + Number(position.unrealizedProfit ?? 0), 0);
 }
 
-function getNewestPositionEventTime(positions: AsterAccountPosition[]): number {
+function getNewestPositionEventTime(positions: AccountPosition[]): number {
   if (!positions.length) return Date.now();
   return positions.reduce((max, p) => Math.max(max, Number(p.updateTime) || 0), 0);
 }
@@ -1036,7 +1036,7 @@ function mapAccountSnapshot(
   response: IApiSubAccountSummaryResponse,
   symbol: string,
   instrument: string
-): AsterAccountSnapshot {
+): AccountSnapshot {
   const result = response.result;
   if (!result) {
     return emptyAccount(symbol);
@@ -1068,7 +1068,7 @@ function mapPositions(
   response: IApiPositionsResponse,
   symbol: string,
   instrument: string
-): AsterAccountPosition[] {
+): AccountPosition[] {
   return (response.result ?? [])
     .filter((entry) => !entry.instrument || entry.instrument === instrument)
     .map((entry) => ({
@@ -1084,11 +1084,11 @@ function mapPositions(
     }));
 }
 
-function mapOpenOrders(response: IApiOpenOrdersResponse, symbol: string): AsterOrder[] {
+function mapOpenOrders(response: IApiOpenOrdersResponse, symbol: string): Order[] {
   return (response.result ?? []).map((order) => mapOrder(order, symbol));
 }
 
-function mapOrder(order: IOrder, symbol: string): AsterOrder {
+function mapOrder(order: IOrder, symbol: string): Order {
   const leg = order.legs?.[0];
   const state = order.state;
   const metadata = order.metadata;
@@ -1126,7 +1126,7 @@ function mapOrder(order: IOrder, symbol: string): AsterOrder {
   };
 }
 
-function mapDepth(response: IApiOrderbookLevelsResponse, symbol: string): AsterDepth | null {
+function mapDepth(response: IApiOrderbookLevelsResponse, symbol: string): Depth | null {
   const result = response.result;
   if (!result) return null;
   const toLevel = (entries: Array<{ price?: string; size?: string }> | undefined) =>
@@ -1140,7 +1140,7 @@ function mapDepth(response: IApiOrderbookLevelsResponse, symbol: string): AsterD
   };
 }
 
-function mapTicker(response: IApiTickerResponse, symbol: string): AsterTicker | null {
+function mapTicker(response: IApiTickerResponse, symbol: string): Ticker | null {
   const result = response.result;
   if (!result) return null;
   const buyVolume = Number(result.buy_volume_24h_b ?? 0);
@@ -1161,7 +1161,7 @@ function mapTicker(response: IApiTickerResponse, symbol: string): AsterTicker | 
   };
 }
 
-function mapKlines(response: IApiCandlestickResponse, _symbol: string): AsterKline[] {
+function mapKlines(response: IApiCandlestickResponse, _symbol: string): Kline[] {
   return (response.result ?? []).reverse().map((entry) => ({
     openTime: nsToMs(entry.open_time ?? Date.now() * ONE_SECOND_IN_NANOSECONDS),
     closeTime: nsToMs(entry.close_time ?? Date.now() * ONE_SECOND_IN_NANOSECONDS),
@@ -1174,7 +1174,7 @@ function mapKlines(response: IApiCandlestickResponse, _symbol: string): AsterKli
   }));
 }
 
-function mapCreateOrderResponse(response: IApiCreateOrderResponse, symbol: string): AsterOrder {
+function mapCreateOrderResponse(response: IApiCreateOrderResponse, symbol: string): Order {
   const order = response.result ?? (response as unknown as { order?: IOrder }).order;
   if (!order) {
     return {
@@ -1551,7 +1551,7 @@ function padPrivateKey(value: string): string {
   return hex;
 }
 
-function emptyAccount(symbol: string): AsterAccountSnapshot {
+function emptyAccount(symbol: string): AccountSnapshot {
   return {
     canTrade: true,
     canDeposit: true,
@@ -1568,5 +1568,5 @@ function emptyAccount(symbol: string): AsterAccountSnapshot {
         updateTime: Date.now(),
       },
     ],
-  } as AsterAccountSnapshot;
+  } as AccountSnapshot;
 }

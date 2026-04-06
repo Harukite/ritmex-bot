@@ -1,6 +1,6 @@
 import type { BasisArbConfig } from "../config";
 import type { ExchangeAdapter, FundingRateSnapshot } from "../exchanges/adapter";
-import type { AsterAccountSnapshot, AsterDepth, AsterSpotBookTicker } from "../exchanges/types";
+import type { AccountSnapshot, Depth, AsterSpotBookTicker } from "../exchanges/types";
 import { AsterSpotRestClient, AsterRestClient } from "../exchanges/aster/client";
 import { createTradeLog, type TradeLogEntry } from "../logging/trade-log";
 import { StrategyEventEmitter } from "./common/event-emitter";
@@ -155,7 +155,7 @@ export class BasisArbEngine {
   private bootstrap(): void {
     const log: LogHandler = (type, detail) => this.tradeLog.push(type, detail);
 
-    safeSubscribe<AsterDepth>(
+    safeSubscribe<Depth>(
       this.exchange.watchDepth.bind(this.exchange, this.config.futuresSymbol),
       (depth) => {
         this.applyFuturesDepth(depth);
@@ -168,7 +168,7 @@ export class BasisArbEngine {
     );
 
     if (this.exchange.id === "nado" || this.exchange.id === "standx" || this.exchange.id === "binance") {
-      safeSubscribe<AsterDepth>(
+      safeSubscribe<Depth>(
         this.exchange.watchDepth.bind(this.exchange, this.config.spotSymbol),
         (depth) => {
           this.applySpotDepth(depth);
@@ -196,7 +196,7 @@ export class BasisArbEngine {
         );
       }
 
-      safeSubscribe<AsterAccountSnapshot>(
+      safeSubscribe<AccountSnapshot>(
         this.exchange.watchAccount.bind(this.exchange),
         (snapshot) => {
           this.applyAccountSnapshot(snapshot);
@@ -210,7 +210,7 @@ export class BasisArbEngine {
     }
   }
 
-  private applyFuturesDepth(depth: AsterDepth): void {
+  private applyFuturesDepth(depth: Depth): void {
     if (!depth?.bids?.length || !depth?.asks?.length) {
       return;
     }
@@ -360,7 +360,7 @@ export class BasisArbEngine {
     this.emitUpdate();
   }
 
-  private applySpotDepth(depth: AsterDepth): void {
+  private applySpotDepth(depth: Depth): void {
     if (!depth?.bids?.length || !depth?.asks?.length) {
       return;
     }
@@ -395,7 +395,7 @@ export class BasisArbEngine {
     this.emitUpdate();
   }
 
-  private applyAccountSnapshot(snapshot: AsterAccountSnapshot): void {
+  private applyAccountSnapshot(snapshot: AccountSnapshot): void {
     const assets = Array.isArray(snapshot.assets) ? snapshot.assets : [];
 
     const spotBalances: SpotBalanceStateEntry[] = [];

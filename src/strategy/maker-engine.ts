@@ -1,10 +1,10 @@
 import type { MakerConfig } from "../config";
 import type { ExchangeAdapter } from "../exchanges/adapter";
 import type {
-  AsterAccountSnapshot,
-  AsterDepth,
-  AsterOrder,
-  AsterTicker,
+  AccountSnapshot,
+  Depth,
+  Order,
+  Ticker,
 } from "../exchanges/types";
 import { formatPriceToString } from "../utils/math";
 import { createTradeLog, type TradeLogEntry } from "../logging/trade-log";
@@ -47,7 +47,7 @@ export interface MakerEngineSnapshot {
   pnl: number;
   accountUnrealized: number;
   sessionVolume: number;
-  openOrders: AsterOrder[];
+  openOrders: Order[];
   desiredOrders: DesiredOrder[];
   tradeLog: TradeLogEntry[];
   lastUpdated: number | null;
@@ -66,10 +66,10 @@ const EPS = 1e-5;
 const INSUFFICIENT_BALANCE_COOLDOWN_MS = 15_000;
 
 export class MakerEngine {
-  private accountSnapshot: AsterAccountSnapshot | null = null;
-  private depthSnapshot: AsterDepth | null = null;
-  private tickerSnapshot: AsterTicker | null = null;
-  private openOrders: AsterOrder[] = [];
+  private accountSnapshot: AccountSnapshot | null = null;
+  private depthSnapshot: Depth | null = null;
+  private tickerSnapshot: Ticker | null = null;
+  private openOrders: Order[] = [];
 
   private readonly locks: OrderLockMap = {};
   private readonly timers: OrderTimerMap = {};
@@ -154,7 +154,7 @@ export class MakerEngine {
   private bootstrap(): void {
     const log: LogHandler = (type, detail) => this.tradeLog.push(type, detail);
 
-    safeSubscribe<AsterAccountSnapshot>(
+    safeSubscribe<AccountSnapshot>(
       this.exchange.watchAccount.bind(this.exchange),
       (snapshot) => {
         this.accountSnapshot = snapshot;
@@ -178,7 +178,7 @@ export class MakerEngine {
       }
     );
 
-    safeSubscribe<AsterOrder[]>(
+    safeSubscribe<Order[]>(
       this.exchange.watchOrders.bind(this.exchange),
       (orders) => {
         this.syncLocksWithOrders(orders);
@@ -211,7 +211,7 @@ export class MakerEngine {
       }
     );
 
-    safeSubscribe<AsterDepth>(
+    safeSubscribe<Depth>(
       this.exchange.watchDepth.bind(this.exchange, this.config.symbol),
       (depth) => {
         this.depthSnapshot = depth;
@@ -229,7 +229,7 @@ export class MakerEngine {
       }
     );
 
-    safeSubscribe<AsterTicker>(
+    safeSubscribe<Ticker>(
       this.exchange.watchTicker.bind(this.exchange, this.config.symbol),
       (ticker) => {
         this.tickerSnapshot = ticker;
@@ -250,7 +250,7 @@ export class MakerEngine {
     // Maker strategy does not require realtime klines.
   }
 
-  private syncLocksWithOrders(orders: AsterOrder[] | null | undefined): void {
+  private syncLocksWithOrders(orders: Order[] | null | undefined): void {
     const list = Array.isArray(orders) ? orders : [];
     Object.keys(this.pending).forEach((type) => {
       const pendingId = this.pending[type];

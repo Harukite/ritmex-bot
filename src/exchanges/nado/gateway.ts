@@ -23,13 +23,13 @@ import type {
   TickerListener,
 } from "../adapter";
 import type {
-  AsterAccountAsset,
-  AsterAccountPosition,
-  AsterAccountSnapshot,
-  AsterDepth,
-  AsterKline,
-  AsterOrder,
-  AsterTicker,
+  AccountAsset,
+  AccountPosition,
+  AccountSnapshot,
+  Depth,
+  Kline,
+  Order,
+  Ticker,
   CreateOrderParams,
   TimeInForce,
 } from "../types";
@@ -331,7 +331,7 @@ export class NadoGateway {
   private readonly openOrdersByDigest = new Map<string, LocalOrder>();
   private readonly triggerOrdersByDigest = new Map<string, TriggerOrder>();
 
-  private accountSnapshot: AsterAccountSnapshot | null = null;
+  private accountSnapshot: AccountSnapshot | null = null;
   private lastAccountSyncAt = 0;
 
   private gatewayWs: NodeWebSocket | null = null;
@@ -356,7 +356,7 @@ export class NadoGateway {
   private accountPollTimer: ReturnType<typeof setInterval> | null = null;
   private ordersPollTimer: ReturnType<typeof setInterval> | null = null;
   private triggerOrdersPollTimer: ReturnType<typeof setInterval> | null = null;
-  private klinesState = new Map<string, { productId: number; periodSec: number; klines: AsterKline[] }>();
+  private klinesState = new Map<string, { productId: number; periodSec: number; klines: Kline[] }>();
 
   private subscriptionRequestId = 1;
   private subscriptionAuthComplete = false;
@@ -567,7 +567,7 @@ export class NadoGateway {
     };
   }
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
     await this.ensureInitialized(params.symbol);
     const meta = this.getSymbolMetaOrThrow(params.symbol);
     if (params.type === "STOP_MARKET") {
@@ -1139,7 +1139,7 @@ export class NadoGateway {
     return Number.isFinite(asNumber) && asNumber > 0 ? Math.floor(asNumber) : 60;
   }
 
-  private async fetchCandlesticks(productId: number, periodSec: number, limit: number): Promise<AsterKline[]> {
+  private async fetchCandlesticks(productId: number, periodSec: number, limit: number): Promise<Kline[]> {
     try {
       const result = await this.indexer.getCandlesticks({ productId, period: periodSec, limit });
       const reversed = Array.from(result).reverse();
@@ -1262,8 +1262,8 @@ export class NadoGateway {
     }
   }
 
-  private buildAsterOrdersSnapshot(): AsterOrder[] {
-    const orders: AsterOrder[] = [];
+  private buildAsterOrdersSnapshot(): Order[] {
+    const orders: Order[] = [];
     for (const order of this.openOrdersByDigest.values()) {
       const meta = this.symbolMetaByProductId.get(order.productId);
       if (!meta) continue;
@@ -1322,7 +1322,7 @@ export class NadoGateway {
     return orders;
   }
 
-  private buildDepthSnapshot(productId: number, symbol: string): AsterDepth | null {
+  private buildDepthSnapshot(productId: number, symbol: string): Depth | null {
     const bbo = this.bestBidOfferByProductId.get(productId);
     if (!bbo) return null;
     const bids: [string, string][] = [[fromX18(bbo.bidX18).toFixed(), fromX18(bbo.bidQtyX18).toFixed()]];
@@ -1336,7 +1336,7 @@ export class NadoGateway {
     };
   }
 
-  private buildTickerSnapshot(productId: number, symbol: string): AsterTicker | null {
+  private buildTickerSnapshot(productId: number, symbol: string): Ticker | null {
     const bbo = this.bestBidOfferByProductId.get(productId);
     if (!bbo) return null;
     const trade = this.lastTradePriceByProductId.get(productId);
@@ -1360,10 +1360,10 @@ export class NadoGateway {
     };
   }
 
-  private mapSubaccountInfoToAsterSnapshot(data: NonNullable<NadoSubaccountInfoResponse["data"]>): AsterAccountSnapshot {
+  private mapSubaccountInfoToAsterSnapshot(data: NonNullable<NadoSubaccountInfoResponse["data"]>): AccountSnapshot {
     const now = nowMs();
-    const assets: AsterAccountAsset[] = [];
-    const positions: AsterAccountPosition[] = [];
+    const assets: AccountAsset[] = [];
+    const positions: AccountPosition[] = [];
 
     const spotBalanceByProductId = new Map<number, string>();
     for (const entry of data.spot_balances ?? []) {
@@ -1771,7 +1771,7 @@ export class NadoGateway {
       if (state.periodSec !== event.granularity) continue;
       const openTime = event.timestamp * 1000;
       const closeTime = openTime + state.periodSec * 1000 - 1;
-      const next: AsterKline = {
+      const next: Kline = {
         openTime,
         closeTime,
         open: fromX18(event.open_x18).toFixed(),
@@ -1795,7 +1795,7 @@ export class NadoGateway {
     }
   }
 
-  private async createLimitOrder(meta: SymbolMeta, params: CreateOrderParams): Promise<AsterOrder> {
+  private async createLimitOrder(meta: SymbolMeta, params: CreateOrderParams): Promise<Order> {
     if (!this.chainId) throw new Error("Nado not initialized (chainId missing)");
     const side = params.side;
     const qty = params.quantity ?? 0;
@@ -1905,7 +1905,7 @@ export class NadoGateway {
     };
   }
 
-  private async createMarketOrder(meta: SymbolMeta, params: CreateOrderParams): Promise<AsterOrder> {
+  private async createMarketOrder(meta: SymbolMeta, params: CreateOrderParams): Promise<Order> {
     if (!this.chainId) throw new Error("Nado not initialized (chainId missing)");
     const side = params.side;
     const qty = params.quantity ?? 0;
@@ -2017,7 +2017,7 @@ export class NadoGateway {
     };
   }
 
-  private async createStopOrder(meta: SymbolMeta, params: CreateOrderParams): Promise<AsterOrder> {
+  private async createStopOrder(meta: SymbolMeta, params: CreateOrderParams): Promise<Order> {
     if (!this.chainId || !this.endpointAddr) throw new Error("Nado not initialized (contracts missing)");
     const side = params.side;
     const qty = params.quantity ?? 0;

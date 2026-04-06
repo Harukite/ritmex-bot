@@ -15,7 +15,7 @@ import {
   routeTrailingStopOrder,
 } from "../exchanges/order-router";
 import { buildAdapterFromEnv } from "../exchanges/resolve-from-env";
-import type { AsterDepth, AsterKline, AsterOrder, AsterTicker } from "../exchanges/types";
+import type { Depth, Kline, Order, Ticker } from "../exchanges/types";
 import { startStrategy } from "./strategy-runner";
 import type {
   CommandErrorPayload,
@@ -266,7 +266,7 @@ async function handleMarketTicker(
   buildAdapterFromEnvFn: typeof buildAdapterFromEnv
 ): Promise<unknown> {
   const { adapter, exchange, symbol } = createAdapterContext(command, buildAdapterFromEnvFn);
-  const ticker = await waitForFirst<AsterTicker>(
+  const ticker = await waitForFirst<Ticker>(
     (cb) => adapter.watchTicker(symbol, cb),
     command.timeoutMs,
     "market ticker"
@@ -279,7 +279,7 @@ async function handleMarketDepth(
   buildAdapterFromEnvFn: typeof buildAdapterFromEnv
 ): Promise<unknown> {
   const { adapter, exchange, symbol } = createAdapterContext(command, buildAdapterFromEnvFn);
-  const depth = await waitForFirst<AsterDepth>(
+  const depth = await waitForFirst<Depth>(
     (cb) => adapter.watchDepth(symbol, cb),
     command.timeoutMs,
     "market depth"
@@ -300,7 +300,7 @@ async function handleMarketKline(
   buildAdapterFromEnvFn: typeof buildAdapterFromEnv
 ): Promise<unknown> {
   const { adapter, exchange, symbol } = createAdapterContext(command, buildAdapterFromEnvFn);
-  const klines = await waitForFirst<AsterKline[]>(
+  const klines = await waitForFirst<Kline[]>(
     (cb) => adapter.watchKlines(symbol, command.interval, cb),
     command.timeoutMs,
     "market kline"
@@ -379,7 +379,7 @@ async function handleOrderCreate(
     timeInForce: payload.timeInForce,
   };
 
-  let order: AsterOrder;
+  let order: Order;
   switch (payload.type) {
     case "limit":
       order = await routeLimitOrder({

@@ -1,5 +1,5 @@
 import type { ExchangeAdapter } from "../exchanges/adapter";
-import type { AsterOrder } from "../exchanges/types";
+import type { Order } from "../exchanges/types";
 import {
   routeCloseOrder,
   routeLimitOrder,
@@ -88,7 +88,7 @@ export function unlockOperating(
 export async function deduplicateOrders(
   adapter: ExchangeAdapter,
   symbol: string,
-  openOrders: AsterOrder[],
+  openOrders: Order[],
   locks: OrderLockMap,
   timers: OrderTimerMap,
   pendings: OrderPendingMap,
@@ -139,7 +139,7 @@ type PlaceOrderOptions = {
 export async function placeOrder(
   adapter: ExchangeAdapter,
   symbol: string,
-  openOrders: AsterOrder[],
+  openOrders: Order[],
   locks: OrderLockMap,
   timers: OrderTimerMap,
   pendings: OrderPendingMap,
@@ -150,7 +150,7 @@ export async function placeOrder(
   reduceOnly = false,
   guard?: OrderGuardOptions,
   opts?: PlaceOrderOptions
-): Promise<AsterOrder | undefined> {
+): Promise<Order | undefined> {
   const type = "LIMIT";
   if (isOperating(locks, type)) return;
   const priceNum = Number(price);
@@ -197,7 +197,7 @@ export async function placeOrder(
 export async function placeMarketOrder(
   adapter: ExchangeAdapter,
   symbol: string,
-  openOrders: AsterOrder[],
+  openOrders: Order[],
   locks: OrderLockMap,
   timers: OrderTimerMap,
   pendings: OrderPendingMap,
@@ -207,7 +207,7 @@ export async function placeMarketOrder(
   reduceOnly = false,
   guard?: OrderGuardOptions,
   opts?: { qtyStep: number }
-): Promise<AsterOrder | undefined> {
+): Promise<Order | undefined> {
   const type = "MARKET";
   if (isOperating(locks, type)) return;
   if (!enforceMarkPriceGuard(side, guard?.expectedPrice ?? null, guard, log, "市价单")) return;
@@ -247,7 +247,7 @@ export async function placeMarketOrder(
 export async function placeStopLossOrder(
   adapter: ExchangeAdapter,
   symbol: string,
-  openOrders: AsterOrder[],
+  openOrders: Order[],
   locks: OrderLockMap,
   timers: OrderTimerMap,
   pendings: OrderPendingMap,
@@ -258,7 +258,7 @@ export async function placeStopLossOrder(
   log: LogHandler,
   guard?: OrderGuardOptions,
   opts?: { priceTick: number; qtyStep: number }
-): Promise<AsterOrder | undefined> {
+): Promise<Order | undefined> {
   const type = "STOP_MARKET";
   if (isOperating(locks, type)) return;
   if (!enforceMarkPriceGuard(side, stopPrice, guard, log, "止损单")) return;
@@ -314,7 +314,7 @@ export async function placeStopLossOrder(
 export async function placeTrailingStopOrder(
   adapter: ExchangeAdapter,
   symbol: string,
-  openOrders: AsterOrder[],
+  openOrders: Order[],
   locks: OrderLockMap,
   timers: OrderTimerMap,
   pendings: OrderPendingMap,
@@ -325,7 +325,7 @@ export async function placeTrailingStopOrder(
   log: LogHandler,
   guard?: OrderGuardOptions,
   opts?: { priceTick: number; qtyStep: number }
-): Promise<AsterOrder | undefined> {
+): Promise<Order | undefined> {
   const type = "TRAILING_STOP_MARKET";
   if (isOperating(locks, type)) return;
   if (!adapter.supportsTrailingStops()) {
@@ -375,7 +375,7 @@ export async function placeTrailingStopOrder(
 export async function marketClose(
   adapter: ExchangeAdapter,
   symbol: string,
-  openOrders: AsterOrder[],
+  openOrders: Order[],
   locks: OrderLockMap,
   timers: OrderTimerMap,
   pendings: OrderPendingMap,

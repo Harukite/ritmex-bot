@@ -14,13 +14,13 @@ import type {
   TickerListener,
 } from "../adapter";
 import type {
-  AsterAccountAsset,
-  AsterAccountPosition,
-  AsterAccountSnapshot,
-  AsterDepth,
-  AsterKline,
-  AsterOrder,
-  AsterTicker,
+  AccountAsset,
+  AccountPosition,
+  AccountSnapshot,
+  Depth,
+  Kline,
+  Order,
+  Ticker,
   CreateOrderParams,
   OrderSide,
   OrderType,
@@ -77,7 +77,7 @@ type FundingState = {
 };
 
 type VirtualStop = {
-  order: AsterOrder;
+  order: Order;
   stopPrice: number;
   side: OrderSide;
   symbol: string;
@@ -279,7 +279,7 @@ function resolutionFromInterval(interval: string): { resolution: string; seconds
   return { resolution: "1", seconds: 60 };
 }
 
-function mergeOrderSnapshot(map: Map<string, AsterOrder>, order: AsterOrder): void {
+function mergeOrderSnapshot(map: Map<string, Order>, order: Order): void {
   const key = String(order.orderId);
   const existing = map.get(key);
   if (!existing) {
@@ -418,12 +418,12 @@ export class StandxGateway {
   private readonly fundingListeners = new Map<string, Set<FundingRateListener>>();
   private readonly connectionListeners = new Set<ConnectionEventListener>();
 
-  private readonly openOrders = new Map<string, AsterOrder>();
-  private readonly positions = new Map<string, AsterAccountPosition>();
-  private readonly balances = new Map<string, AsterAccountAsset>();
+  private readonly openOrders = new Map<string, Order>();
+  private readonly positions = new Map<string, AccountPosition>();
+  private readonly balances = new Map<string, AccountAsset>();
   private readonly virtualStops = new Map<string, VirtualStop>();
 
-  private accountSnapshot: AsterAccountSnapshot | null = null;
+  private accountSnapshot: AccountSnapshot | null = null;
   private readonly restHealthListeners = new Set<RestHealthListener>();
   private restConsecutiveErrors = 0;
   private restUnhealthy = false;
@@ -582,14 +582,14 @@ export class StandxGateway {
    * 查询当前真实的挂单状态（通过 HTTP API）
    * 用于在网络恢复后验证实际挂单情况
    */
-  async queryOpenOrders(symbol: string): Promise<AsterOrder[]> {
+  async queryOpenOrders(symbol: string): Promise<Order[]> {
     const normalized = normalizeSymbol(symbol);
     const ordersPayload = await this.requestJson<unknown>("/api/query_open_orders", {
       method: "GET",
       params: { symbol: normalized },
     });
     const orders = extractOrders(ordersPayload);
-    const result: AsterOrder[] = [];
+    const result: Order[] = [];
     for (const raw of orders) {
       const order = this.mapOrder(raw);
       result.push(order);
@@ -618,7 +618,7 @@ export class StandxGateway {
     }
   }
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
     const normalizedSymbol = normalizeSymbol(params.symbol);
     if (params.type === "STOP_MARKET") {
       return this.createVirtualStopOrder(normalizedSymbol, params);
@@ -785,7 +785,7 @@ export class StandxGateway {
     };
   }
 
-  private async createVirtualStopOrder(symbol: string, params: CreateOrderParams): Promise<AsterOrder> {
+  private async createVirtualStopOrder(symbol: string, params: CreateOrderParams): Promise<Order> {
     const stopPrice = Number(params.stopPrice);
     if (!Number.isFinite(stopPrice)) {
       throw new Error("STOP_MARKET requires stopPrice for StandX");
@@ -796,7 +796,7 @@ export class StandxGateway {
     }
     const now = Date.now();
     const clientOrderId = crypto.randomUUID();
-    const order: AsterOrder = {
+    const order: Order = {
       orderId: clientOrderId,
       clientOrderId,
       symbol,
@@ -825,7 +825,7 @@ export class StandxGateway {
     return order;
   }
 
-  private async submitOrder(symbol: string, params: CreateOrderParams): Promise<AsterOrder> {
+  private async submitOrder(symbol: string, params: CreateOrderParams): Promise<Order> {
     const orderType = params.type === "MARKET" ? "market" : "limit";
     const clientOrderId = crypto.randomUUID();
     const qty = toDecimalString(params.quantity);
@@ -870,7 +870,7 @@ export class StandxGateway {
       throw new Error(response.message ?? "StandX order rejected");
     }
     const now = Date.now();
-    const order: AsterOrder = {
+    const order: Order = {
       orderId: clientOrderId,
       clientOrderId,
       symbol,
@@ -1038,7 +1038,7 @@ export class StandxGateway {
         }
         this.logDebug("ws depth stats", detail);
       }
-      const depth: AsterDepth = {
+      const depth: Depth = {
         lastUpdateId: Number(message.seq ?? Date.now()),
         bids: finalBids,
         asks: finalAsks,
@@ -1355,7 +1355,7 @@ export class StandxGateway {
     console.log(`[StandxGateway] ws raw`, output);
   }
 
-  private emitDepth(symbol: string, depth: AsterDepth): void {
+  private emitDepth(symbol: string, depth: Depth): void {
     const listeners = this.depthListeners.get(normalizeSymbol(symbol));
     if (!listeners) return;
     for (const listener of listeners) {
@@ -1367,7 +1367,7 @@ export class StandxGateway {
     }
   }
 
-  private emitTicker(symbol: string, ticker: AsterTicker): void {
+  private emitTicker(symbol: string, ticker: Ticker): void {
     const listeners = this.tickerListeners.get(normalizeSymbol(symbol));
     if (!listeners) return;
     const price = Number(ticker.lastPrice);
@@ -1406,7 +1406,7 @@ export class StandxGateway {
       (sum, position) => sum + Number(position.unrealizedProfit ?? 0),
       0
     );
-    const snapshot: AsterAccountSnapshot = {
+    const snapshot: AccountSnapshot = {
       canTrade: true,
       canDeposit: true,
       canWithdraw: true,
@@ -1427,7 +1427,7 @@ export class StandxGateway {
     }
   }
 
-  private async refreshAccountSnapshot(): Promise<AsterAccountSnapshot | null> {
+  private async refreshAccountSnapshot(): Promise<AccountSnapshot | null> {
     try {
       const [balance, positions] = await Promise.all([
         this.requestJson<StandxBalanceSnapshot>("/api/query_balance", { method: "GET" }),
@@ -1444,7 +1444,7 @@ export class StandxGateway {
       }
       if (balance) {
         const token = "DUSD";
-        const asset: AsterAccountAsset = {
+        const asset: AccountAsset = {
           asset: token,
           walletBalance: String(balance.balance ?? "0"),
           availableBalance: String(balance.cross_available ?? balance.balance ?? "0"),
@@ -1461,7 +1461,7 @@ export class StandxGateway {
     }
   }
 
-  async queryAccountSnapshot(): Promise<AsterAccountSnapshot | null> {
+  async queryAccountSnapshot(): Promise<AccountSnapshot | null> {
     return await this.refreshAccountSnapshot();
   }
 
@@ -1515,7 +1515,7 @@ export class StandxGateway {
     if (!data?.symbol) return;
     const bids = normalizeDepthLevels((data.bids ?? []).map(([price, qty]) => [String(price), String(qty)]), "bid");
     const asks = normalizeDepthLevels((data.asks ?? []).map(([price, qty]) => [String(price), String(qty)]), "ask");
-    const depth: AsterDepth = {
+    const depth: Depth = {
       lastUpdateId: Date.now(),
       bids,
       asks,
@@ -1554,7 +1554,7 @@ export class StandxGateway {
           },
         });
         if (!response || response.s !== "ok" || !Array.isArray(response.t)) return;
-        const klines: AsterKline[] = response.t.map((openTime, index) => {
+        const klines: Kline[] = response.t.map((openTime, index) => {
           const o = response.o?.[index];
           const h = response.h?.[index];
           const l = response.l?.[index];
@@ -1647,7 +1647,7 @@ export class StandxGateway {
     }
   }
 
-  private mapOrder(data: StandxOrder): AsterOrder {
+  private mapOrder(data: StandxOrder): Order {
     const clientOrderId = data.cl_ord_id ? String(data.cl_ord_id) : data.id != null ? String(data.id) : "";
     const orderId = clientOrderId || (data.id != null ? String(data.id) : "") || crypto.randomUUID();
     const normalizedClientId = clientOrderId || orderId;
@@ -1675,7 +1675,7 @@ export class StandxGateway {
     };
   }
 
-  private mapPosition(data: StandxPosition): AsterAccountPosition {
+  private mapPosition(data: StandxPosition): AccountPosition {
     return {
       symbol: data.symbol,
       positionAmt: String(data.qty ?? "0"),
@@ -1690,7 +1690,7 @@ export class StandxGateway {
     };
   }
 
-  private mapBalance(data: StandxBalance): AsterAccountAsset {
+  private mapBalance(data: StandxBalance): AccountAsset {
     const walletBalance = data.total ?? data.free ?? "0";
     const availableBalance = data.free ?? walletBalance;
     return {
@@ -1701,7 +1701,7 @@ export class StandxGateway {
     };
   }
 
-  private mapTicker(data: StandxPrice): AsterTicker {
+  private mapTicker(data: StandxPrice): Ticker {
     const spread = data.spread ?? [data.spread_bid ?? "0", data.spread_ask ?? "0"];
     const lastPrice = data.last_price ?? data.mark_price ?? data.index_price ?? data.mid_price ?? "0";
     return {

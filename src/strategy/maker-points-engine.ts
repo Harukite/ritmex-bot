@@ -1,10 +1,10 @@
 import type { MakerPointsConfig } from "../config";
 import type { ExchangeAdapter } from "../exchanges/adapter";
 import type {
-  AsterAccountSnapshot,
-  AsterDepth,
-  AsterOrder,
-  AsterTicker,
+  AccountSnapshot,
+  Depth,
+  Order,
+  Ticker,
 } from "../exchanges/types";
 import { formatPriceToString } from "../utils/math";
 import { createTradeLog, type TradeLogEntry } from "../logging/trade-log";
@@ -59,7 +59,7 @@ export interface MakerPointsSnapshot {
   pnl: number;
   accountUnrealized: number;
   sessionVolume: number;
-  openOrders: AsterOrder[];
+  openOrders: Order[];
   desiredOrders: DesiredOrder[];
   tradeLog: TradeLogEntry[];
   lastUpdated: number | null;
@@ -102,10 +102,10 @@ const STANDX_MARGIN_MODE_MAX_ATTEMPTS = 10;
 const ACCOUNT_STALE_REST_PROBE_MIN_INTERVAL_MS = 5_000;
 
 export class MakerPointsEngine {
-  private accountSnapshot: AsterAccountSnapshot | null = null;
-  private depthSnapshot: AsterDepth | null = null;
-  private tickerSnapshot: AsterTicker | null = null;
-  private openOrders: AsterOrder[] = [];
+  private accountSnapshot: AccountSnapshot | null = null;
+  private depthSnapshot: Depth | null = null;
+  private tickerSnapshot: Ticker | null = null;
+  private openOrders: Order[] = [];
 
   private readonly locks: OrderLockMap = {};
   private readonly timers: OrderTimerMap = {};
@@ -298,7 +298,7 @@ export class MakerPointsEngine {
     const log: LogHandler = (type, detail) => this.tradeLog.push(type, detail);
     this.setupRestHealthProtection();
 
-    safeSubscribe<AsterAccountSnapshot>(
+    safeSubscribe<AccountSnapshot>(
       this.exchange.watchAccount.bind(this.exchange),
       (snapshot) => {
         this.applyAccountSnapshot(snapshot);
@@ -310,7 +310,7 @@ export class MakerPointsEngine {
       }
     );
 
-    safeSubscribe<AsterOrder[]>(
+    safeSubscribe<Order[]>(
       this.exchange.watchOrders.bind(this.exchange),
       (orders) => {
         this.syncLocksWithOrders(orders);
@@ -339,7 +339,7 @@ export class MakerPointsEngine {
       }
     );
 
-    safeSubscribe<AsterDepth>(
+    safeSubscribe<Depth>(
       this.exchange.watchDepth.bind(this.exchange, this.config.symbol),
       (depth) => {
         this.depthSnapshot = depth;
@@ -358,7 +358,7 @@ export class MakerPointsEngine {
       }
     );
 
-    safeSubscribe<AsterTicker>(
+    safeSubscribe<Ticker>(
       this.exchange.watchTicker.bind(this.exchange, this.config.symbol),
       (ticker) => {
         this.tickerSnapshot = ticker;
@@ -376,7 +376,7 @@ export class MakerPointsEngine {
     this.setupConnectionProtection();
   }
 
-  private applyAccountSnapshot(snapshot: AsterAccountSnapshot): void {
+  private applyAccountSnapshot(snapshot: AccountSnapshot): void {
     this.accountSnapshot = snapshot;
     // StandX: WS 推送使用本地接收时间戳；REST 快照使用响应里的 time 字段映射到 snapshot.updateTime
     this.lastStandxAccountTime =
@@ -545,7 +545,7 @@ export class MakerPointsEngine {
     }
   }
 
-  private syncLocksWithOrders(orders: AsterOrder[] | null | undefined): void {
+  private syncLocksWithOrders(orders: Order[] | null | undefined): void {
     const list = Array.isArray(orders) ? orders : [];
     Object.keys(this.pending).forEach((type) => {
       const pendingId = this.pending[type];
@@ -746,7 +746,7 @@ export class MakerPointsEngine {
     ask1: number;
     skipBuy: boolean;
     skipSell: boolean;
-    depth: AsterDepth | null;
+    depth: Depth | null;
   }): DesiredOrder[] {
     const { bid1, ask1, skipBuy, skipSell, depth } = params;
 
@@ -837,7 +837,7 @@ export class MakerPointsEngine {
    * 当深度从足够变为不足，或从不足变为足够时，需要触发重新计算
    */
   private checkDepthStatusChanged(
-    depth: AsterDepth | null,
+    depth: Depth | null,
     bid1: number,
     ask1: number
   ): boolean {
@@ -879,7 +879,7 @@ export class MakerPointsEngine {
   /**
    * 当深度从“满足阈值”切换到“不满足阈值”时，立即触发一次主循环，优先撤销不再安全的挂单。
    */
-  private shouldTriggerImmediateDepthProtection(depth: AsterDepth | null): boolean {
+  private shouldTriggerImmediateDepthProtection(depth: Depth | null): boolean {
     if (!depth) return false;
     if (this.defenseMode || this.reconnectResetPending || this.stopLossProcessing) return false;
 
@@ -917,7 +917,7 @@ export class MakerPointsEngine {
   /**
    * 当盘口相对上次报价偏移超过 minRepriceBps 时，立即触发一次主循环，优先撤销旧报价。
    */
-  private shouldTriggerImmediateReprice(depth: AsterDepth | null): boolean {
+  private shouldTriggerImmediateReprice(depth: Depth | null): boolean {
     if (!depth) return false;
     if (this.defenseMode || this.reconnectResetPending || this.stopLossProcessing) return false;
 
@@ -1993,7 +1993,7 @@ export class MakerPointsEngine {
     void poll();
   }
 
-  private getStandxMarginMode(snapshot: AsterAccountSnapshot | null): string | null {
+  private getStandxMarginMode(snapshot: AccountSnapshot | null): string | null {
     if (this.exchange.id !== "standx") return null;
     const positions = snapshot?.positions ?? [];
     const match = positions.find((pos) => pos.symbol === this.config.symbol);

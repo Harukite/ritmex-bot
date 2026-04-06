@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { AsterAccountSnapshot } from "../src/exchanges/types";
+import type { AccountSnapshot } from "../src/exchanges/types";
 import { validateAccountSnapshotForSymbol } from "../src/utils/strategy";
 
-function baseSnapshot(positions: AsterAccountSnapshot["positions"]): AsterAccountSnapshot {
+function baseSnapshot(positions: AccountSnapshot["positions"]): AccountSnapshot {
   return {
     canTrade: true,
     canDeposit: true,

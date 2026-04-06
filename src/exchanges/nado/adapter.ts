@@ -9,7 +9,7 @@ import type {
   OrderListener,
   TickerListener,
 } from "../adapter";
-import type { AsterOrder, CreateOrderParams } from "../types";
+import type { Order, CreateOrderParams } from "../types";
 import { extractMessage } from "../../utils/errors";
 import { NadoGateway, type NadoGatewayOptions } from "./gateway";
 import type { ChainEnv } from "@nadohq/shared";
@@ -115,7 +115,7 @@ export class NadoExchangeAdapter implements ExchangeAdapter {
     this.gateway.onFundingRate(symbol, this.safeInvoke("watchFundingRate", cb));
   }
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
     await this.ensureInitialized("createOrder");
     return this.gateway.createOrder(params);
   }

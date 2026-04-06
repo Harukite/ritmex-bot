@@ -3,11 +3,11 @@ import { executeCliCommand } from "../src/cli/command-executor";
 import type { ParsedCliCommand } from "../src/cli/command-types";
 import type { ExchangeAdapter } from "../src/exchanges/adapter";
 import type {
-  AsterAccountSnapshot,
-  AsterDepth,
-  AsterKline,
-  AsterOrder,
-  AsterTicker,
+  AccountSnapshot,
+  Depth,
+  Kline,
+  Order,
+  Ticker,
   CreateOrderParams,
 } from "../src/exchanges/types";
 
@@ -22,7 +22,7 @@ class FakeAdapter implements ExchangeAdapter {
     return true;
   }
 
-  watchAccount(cb: (snapshot: AsterAccountSnapshot) => void): void {
+  watchAccount(cb: (snapshot: AccountSnapshot) => void): void {
     cb({
       canTrade: true,
       canDeposit: true,
@@ -35,11 +35,11 @@ class FakeAdapter implements ExchangeAdapter {
     });
   }
 
-  watchOrders(cb: (orders: AsterOrder[]) => void): void {
+  watchOrders(cb: (orders: Order[]) => void): void {
     cb([]);
   }
 
-  watchDepth(_symbol: string, cb: (depth: AsterDepth) => void): void {
+  watchDepth(_symbol: string, cb: (depth: Depth) => void): void {
     cb({
       lastUpdateId: 1,
       bids: [["100", "1"]],
@@ -47,7 +47,7 @@ class FakeAdapter implements ExchangeAdapter {
     });
   }
 
-  watchTicker(symbol: string, cb: (ticker: AsterTicker) => void): void {
+  watchTicker(symbol: string, cb: (ticker: Ticker) => void): void {
     cb({
       symbol,
       lastPrice: "100",
@@ -57,10 +57,10 @@ class FakeAdapter implements ExchangeAdapter {
       volume: "10",
       quoteVolume: "1000",
       eventTime: Date.now(),
-    } as AsterTicker);
+    } as Ticker);
   }
 
-  watchKlines(_symbol: string, _interval: string, cb: (klines: AsterKline[]) => void): void {
+  watchKlines(_symbol: string, _interval: string, cb: (klines: Kline[]) => void): void {
     cb([
       {
         openTime: 1,
@@ -75,7 +75,7 @@ class FakeAdapter implements ExchangeAdapter {
     ]);
   }
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
     this.createOrderCalls += 1;
     return {
       orderId: "1",

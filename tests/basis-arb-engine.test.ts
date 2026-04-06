@@ -1,47 +1,47 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ExchangeAdapter } from "../src/exchanges/adapter";
 import type {
-  AsterAccountSnapshot,
-  AsterDepth,
-  AsterKline,
-  AsterOrder,
-  AsterTicker,
+  AccountSnapshot,
+  Depth,
+  Kline,
+  Order,
+  Ticker,
 } from "../src/exchanges/types";
 import { BasisArbEngine } from "../src/strategy/basis-arb-engine";
 
 class StubAdapter implements ExchangeAdapter {
   id = "aster";
-  private depthHandler: ((depth: AsterDepth) => void) | null = null;
+  private depthHandler: ((depth: Depth) => void) | null = null;
 
   supportsTrailingStops(): boolean {
     return false;
   }
 
-  watchAccount(_cb: (snapshot: AsterAccountSnapshot) => void): void {
+  watchAccount(_cb: (snapshot: AccountSnapshot) => void): void {
     // not required for this test
   }
 
-  watchOrders(_cb: (orders: AsterOrder[]) => void): void {
+  watchOrders(_cb: (orders: Order[]) => void): void {
     // not required for this test
   }
 
-  watchDepth(_symbol: string, cb: (depth: AsterDepth) => void): void {
+  watchDepth(_symbol: string, cb: (depth: Depth) => void): void {
     this.depthHandler = cb;
   }
 
-  emitDepth(depth: AsterDepth): void {
+  emitDepth(depth: Depth): void {
     this.depthHandler?.(depth);
   }
 
-  watchTicker(_symbol: string, _cb: (ticker: AsterTicker) => void): void {
+  watchTicker(_symbol: string, _cb: (ticker: Ticker) => void): void {
     // not required for this test
   }
 
-  watchKlines(_symbol: string, _interval: string, _cb: (klines: AsterKline[]) => void): void {
+  watchKlines(_symbol: string, _interval: string, _cb: (klines: Kline[]) => void): void {
     // not required for this test
   }
 
-  createOrder(): Promise<AsterOrder> {
+  createOrder(): Promise<Order> {
     throw new Error("not implemented");
   }
 

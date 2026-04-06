@@ -7,7 +7,7 @@ import type {
   OrderListener,
   TickerListener,
 } from "./adapter";
-import type { AsterOrder, CreateOrderParams, AsterDepth, AsterTicker, AsterKline } from "./types";
+import type { Order, CreateOrderParams, Depth, Ticker, Kline } from "./types";
 import { extractMessage } from "../utils/errors";
 import { AsterGateway } from "./aster/client";
 
@@ -111,26 +111,26 @@ export class AsterExchangeAdapter implements ExchangeAdapter {
 
   watchDepth(symbol: string, cb: DepthListener): void {
     void this.ensureInitialized("watchDepth");
-    this.gateway.onDepth(symbol, this.safeInvoke("watchDepth", (depth: AsterDepth) => {
+    this.gateway.onDepth(symbol, this.safeInvoke("watchDepth", (depth: Depth) => {
       cb(depth);
     }));
   }
 
   watchTicker(symbol: string, cb: TickerListener): void {
     void this.ensureInitialized("watchTicker");
-    this.gateway.onTicker(symbol, this.safeInvoke("watchTicker", (ticker: AsterTicker) => {
+    this.gateway.onTicker(symbol, this.safeInvoke("watchTicker", (ticker: Ticker) => {
       cb(ticker);
     }));
   }
 
   watchKlines(symbol: string, interval: string, cb: KlineListener): void {
     void this.ensureInitialized("watchKlines");
-    this.gateway.onKlines(symbol, interval, this.safeInvoke("watchKlines", (klines: AsterKline[]) => {
+    this.gateway.onKlines(symbol, interval, this.safeInvoke("watchKlines", (klines: Kline[]) => {
       cb(klines);
     }));
   }
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
     await this.ensureInitialized("createOrder");
     return this.gateway.createOrder(params);
   }

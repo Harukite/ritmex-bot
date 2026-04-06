@@ -1,4 +1,4 @@
-import type { AsterOrder } from "../../exchanges/types";
+import type { Order } from "../../exchanges/types";
 
 export interface OrderTarget {
   side: "BUY" | "SELL";
@@ -8,11 +8,11 @@ export interface OrderTarget {
 }
 
 export function makeOrderPlan(
-  openOrders: AsterOrder[],
+  openOrders: Order[],
   targets: OrderTarget[]
-): { toCancel: AsterOrder[]; toPlace: OrderTarget[] } {
+): { toCancel: Order[]; toPlace: OrderTarget[] } {
   const unmatched = new Set(targets.map((_, idx) => idx));
-  const toCancel: AsterOrder[] = [];
+  const toCancel: Order[] = [];
 
   for (const order of openOrders) {
     const orderPrice = String(order.price);

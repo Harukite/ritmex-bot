@@ -7,7 +7,7 @@ import type {
   OrderListener,
   TickerListener,
 } from "../adapter";
-import type { AsterOrder, CreateOrderParams } from "../types";
+import type { Order, CreateOrderParams } from "../types";
 import { extractMessage } from "../../utils/errors";
 import { LighterGateway, type LighterGatewayOptions } from "./gateway";
 
@@ -102,7 +102,7 @@ export class LighterExchangeAdapter implements ExchangeAdapter {
     this.gateway.watchKlines(interval, handler);
   }
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
     await this.ensureInitialized("createOrder");
     return this.gateway.createOrder(params);
   }

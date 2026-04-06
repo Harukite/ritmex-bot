@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ExchangeAdapter } from "../src/exchanges/adapter";
-import type { AsterAccountSnapshot, AsterDepth, AsterKline, AsterOrder, AsterTicker } from "../src/exchanges/types";
+import type { AccountSnapshot, Depth, Kline, Order, Ticker } from "../src/exchanges/types";
 import { MakerPointsEngine } from "../src/strategy/maker-points-engine";
 
 class StandxStubAdapter implements ExchangeAdapter {
@@ -12,20 +12,20 @@ class StandxStubAdapter implements ExchangeAdapter {
     return false;
   }
 
-  watchAccount(_cb: (snapshot: AsterAccountSnapshot) => void): void {}
-  watchOrders(_cb: (orders: AsterOrder[]) => void): void {}
-  watchDepth(_symbol: string, _cb: (depth: AsterDepth) => void): void {}
-  watchTicker(_symbol: string, _cb: (ticker: AsterTicker) => void): void {}
-  watchKlines(_symbol: string, _interval: string, _cb: (klines: AsterKline[]) => void): void {}
+  watchAccount(_cb: (snapshot: AccountSnapshot) => void): void {}
+  watchOrders(_cb: (orders: Order[]) => void): void {}
+  watchDepth(_symbol: string, _cb: (depth: Depth) => void): void {}
+  watchTicker(_symbol: string, _cb: (ticker: Ticker) => void): void {}
+  watchKlines(_symbol: string, _interval: string, _cb: (klines: Kline[]) => void): void {}
 
-  async createOrder(): Promise<AsterOrder> {
+  async createOrder(): Promise<Order> {
     throw new Error("not implemented");
   }
   async cancelOrder(): Promise<void> {}
   async cancelOrders(): Promise<void> {}
   async cancelAllOrders(): Promise<void> {}
 
-  async queryAccountSnapshot(): Promise<AsterAccountSnapshot | null> {
+  async queryAccountSnapshot(): Promise<AccountSnapshot | null> {
     return {
       canTrade: true,
       canDeposit: true,
@@ -98,7 +98,7 @@ describe("MakerPointsEngine StandX isolated margin guard", () => {
       asks: [["101", "1"]],
       eventTime: Date.now(),
       symbol: "BTC-USD",
-    } as AsterDepth;
+    } as Depth;
     (engine as any).tickerSnapshot = {
       symbol: "BTC-USD",
       lastPrice: "100",
@@ -108,7 +108,7 @@ describe("MakerPointsEngine StandX isolated margin guard", () => {
       volume: "0",
       quoteVolume: "0",
       eventTime: Date.now(),
-    } as AsterTicker;
+    } as Ticker;
 
     const syncSpy = vi.fn().mockResolvedValue(undefined);
     (engine as any).syncOrders = syncSpy;
@@ -162,7 +162,7 @@ describe("MakerPointsEngine StandX isolated margin guard", () => {
       asks: [["101", "1"]],
       eventTime: Date.now(),
       symbol: "BTC-USD",
-    } as AsterDepth;
+    } as Depth;
     (engine as any).tickerSnapshot = {
       symbol: "BTC-USD",
       lastPrice: "100",
@@ -172,7 +172,7 @@ describe("MakerPointsEngine StandX isolated margin guard", () => {
       volume: "0",
       quoteVolume: "0",
       eventTime: Date.now(),
-    } as AsterTicker;
+    } as Ticker;
 
     const syncSpy = vi.fn().mockResolvedValue(undefined);
     (engine as any).syncOrders = syncSpy;

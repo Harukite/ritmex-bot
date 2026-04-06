@@ -1,25 +1,25 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ExchangeAdapter } from "../src/exchanges/adapter";
-import type { AsterAccountSnapshot, AsterDepth, AsterKline, AsterOrder, AsterTicker } from "../src/exchanges/types";
+import type { AccountSnapshot, Depth, Kline, Order, Ticker } from "../src/exchanges/types";
 import { MakerPointsEngine } from "../src/strategy/maker-points-engine";
 
 class StubAdapter implements ExchangeAdapter {
   id = "standx";
   cancelAllCount = 0;
-  openOrders: AsterOrder[] | Error = [];
-  accountSnapshot: AsterAccountSnapshot | null = null;
+  openOrders: Order[] | Error = [];
+  accountSnapshot: AccountSnapshot | null = null;
 
   supportsTrailingStops(): boolean {
     return false;
   }
 
-  watchAccount(_cb: (snapshot: AsterAccountSnapshot) => void): void {}
-  watchOrders(_cb: (orders: AsterOrder[]) => void): void {}
-  watchDepth(_symbol: string, _cb: (depth: AsterDepth) => void): void {}
-  watchTicker(_symbol: string, _cb: (ticker: AsterTicker) => void): void {}
-  watchKlines(_symbol: string, _interval: string, _cb: (klines: AsterKline[]) => void): void {}
+  watchAccount(_cb: (snapshot: AccountSnapshot) => void): void {}
+  watchOrders(_cb: (orders: Order[]) => void): void {}
+  watchDepth(_symbol: string, _cb: (depth: Depth) => void): void {}
+  watchTicker(_symbol: string, _cb: (ticker: Ticker) => void): void {}
+  watchKlines(_symbol: string, _interval: string, _cb: (klines: Kline[]) => void): void {}
 
-  async createOrder(): Promise<AsterOrder> {
+  async createOrder(): Promise<Order> {
     throw new Error("not implemented");
   }
 
@@ -31,12 +31,12 @@ class StubAdapter implements ExchangeAdapter {
     this.openOrders = [];
   }
 
-  async queryOpenOrders(): Promise<AsterOrder[]> {
+  async queryOpenOrders(): Promise<Order[]> {
     if (this.openOrders instanceof Error) throw this.openOrders;
     return this.openOrders;
   }
 
-  async queryAccountSnapshot(): Promise<AsterAccountSnapshot | null> {
+  async queryAccountSnapshot(): Promise<AccountSnapshot | null> {
     return this.accountSnapshot;
   }
 }

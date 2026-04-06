@@ -1,11 +1,11 @@
 import type { MakerConfig } from "../config";
 import type { ExchangeAdapter } from "../exchanges/adapter";
 import type {
-  AsterAccountSnapshot,
-  AsterDepth,
-  AsterKline,
-  AsterOrder,
-  AsterTicker,
+  AccountSnapshot,
+  Depth,
+  Kline,
+  Order,
+  Ticker,
 } from "../exchanges/types";
 import { formatPriceToString } from "../utils/math";
 import { createTradeLog } from "../logging/trade-log";
@@ -56,12 +56,12 @@ type MakerListener = (snapshot: OffsetMakerEngineSnapshot) => void;
 const EPS = 1e-5;
 
 export class OffsetMakerEngine {
-  private accountSnapshot: AsterAccountSnapshot | null = null;
-  private depthSnapshot: AsterDepth | null = null;
-  private tickerSnapshot: AsterTicker | null = null;
-  private lastKline: AsterKline | null = null;
+  private accountSnapshot: AccountSnapshot | null = null;
+  private depthSnapshot: Depth | null = null;
+  private tickerSnapshot: Ticker | null = null;
+  private lastKline: Kline | null = null;
   private liveCandle: { startMs: number; open: number; close: number } | null = null;
-  private openOrders: AsterOrder[] = [];
+  private openOrders: Order[] = [];
 
   private readonly locks: OrderLockMap = {};
   private readonly timers: OrderTimerMap = {};
@@ -163,7 +163,7 @@ export class OffsetMakerEngine {
   private bootstrap(): void {
     const log: LogHandler = (type, detail) => this.tradeLog.push(type, detail);
 
-    safeSubscribe<AsterAccountSnapshot>(
+    safeSubscribe<AccountSnapshot>(
       this.exchange.watchAccount.bind(this.exchange),
       (snapshot) => {
         this.accountSnapshot = snapshot;
@@ -207,7 +207,7 @@ export class OffsetMakerEngine {
       }
     );
 
-    safeSubscribe<AsterOrder[]>(
+    safeSubscribe<Order[]>(
       this.exchange.watchOrders.bind(this.exchange),
       (orders) => {
         this.syncLocksWithOrders(orders);
@@ -236,7 +236,7 @@ export class OffsetMakerEngine {
       }
     );
 
-    safeSubscribe<AsterDepth>(
+    safeSubscribe<Depth>(
       this.exchange.watchDepth.bind(this.exchange, this.config.symbol),
       (depth) => {
         this.depthSnapshot = depth;
@@ -250,7 +250,7 @@ export class OffsetMakerEngine {
       }
     );
 
-    safeSubscribe<AsterTicker>(
+    safeSubscribe<Ticker>(
       this.exchange.watchTicker.bind(this.exchange, this.config.symbol),
       (ticker) => {
         this.tickerSnapshot = ticker;
@@ -264,7 +264,7 @@ export class OffsetMakerEngine {
       }
     );
 
-    safeSubscribe<AsterKline[]>(
+    safeSubscribe<Kline[]>(
       this.exchange.watchKlines.bind(this.exchange, this.config.symbol, "1m"),
       (klines) => {
         if (!Array.isArray(klines) || !klines.length) return;
@@ -284,7 +284,7 @@ export class OffsetMakerEngine {
     );
   }
 
-  private syncLocksWithOrders(orders: AsterOrder[] | null | undefined): void {
+  private syncLocksWithOrders(orders: Order[] | null | undefined): void {
     const list = Array.isArray(orders) ? orders : [];
     Object.keys(this.pending).forEach((type) => {
       const pendingId = this.pending[type];
@@ -600,7 +600,7 @@ export class OffsetMakerEngine {
     }
   }
 
-  private evaluateDepth(depth: AsterDepth): {
+  private evaluateDepth(depth: Depth): {
     buySum: number;
     sellSum: number;
     skipBuySide: boolean;
@@ -1038,7 +1038,7 @@ export class OffsetMakerEngine {
     return position;
   }
 
-  private getSpotBalances(snapshot: AsterAccountSnapshot | null = this.accountSnapshot): { baseAvailable: number; quoteAvailable: number; baseWallet: number } | null {
+  private getSpotBalances(snapshot: AccountSnapshot | null = this.accountSnapshot): { baseAvailable: number; quoteAvailable: number; baseWallet: number } | null {
     const assets = snapshot?.assets ?? [];
     if (!assets.length) return null;
     const parsed = parseSymbolParts(this.config.symbol);

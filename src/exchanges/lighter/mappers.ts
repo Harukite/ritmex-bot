@@ -1,12 +1,12 @@
 import type {
-  AsterAccountAsset,
-  AsterAccountPosition,
-  AsterAccountSnapshot,
-  AsterDepth,
-  AsterDepthLevel,
-  AsterKline,
-  AsterOrder,
-  AsterTicker,
+  AccountAsset,
+  AccountPosition,
+  AccountSnapshot,
+  Depth,
+  DepthLevel,
+  Kline,
+  Order,
+  Ticker,
   OrderSide,
   OrderType,
 } from "../types";
@@ -23,8 +23,8 @@ import { coerceBooleanFlag, normalizeBooleanFlag } from "./flags";
 import { normalizeOrderIdentity } from "./order-identity";
 import { normalizeOrderStatus } from "./status";
 
-export function toDepth(symbol: string, snapshot: LighterOrderBookSnapshot): AsterDepth {
-  const toLevels = (levels: LighterOrderBookLevel[]): AsterDepthLevel[] =>
+export function toDepth(symbol: string, snapshot: LighterOrderBookSnapshot): Depth {
+  const toLevels = (levels: LighterOrderBookLevel[]): DepthLevel[] =>
     levels.map((level) => [level.price, level.size]);
   return {
     symbol,
@@ -36,7 +36,7 @@ export function toDepth(symbol: string, snapshot: LighterOrderBookSnapshot): Ast
   };
 }
 
-export function toTicker(symbol: string, stats: LighterMarketStats): AsterTicker {
+export function toTicker(symbol: string, stats: LighterMarketStats): Ticker {
   return {
     symbol,
     eventType: "lighterTicker",
@@ -50,10 +50,10 @@ export function toTicker(symbol: string, stats: LighterMarketStats): AsterTicker
     priceChange: stats.daily_price_change != null ? String(stats.daily_price_change) : undefined,
     markPrice: stats.mid_price ?? stats.mark_price ?? stats.index_price,
     weightedAvgPrice: undefined,
-  } as AsterTicker;
+  } as Ticker;
 }
 
-export function toKlines(symbol: string, interval: string, klines: LighterKline[]): AsterKline[] {
+export function toKlines(symbol: string, interval: string, klines: LighterKline[]): Kline[] {
   return klines.map((entry) => ({
     symbol,
     eventType: "lighterKline",
@@ -72,11 +72,11 @@ export function toKlines(symbol: string, interval: string, klines: LighterKline[
   }));
 }
 
-export function toOrders(symbol: string, orders: LighterOrder[]): AsterOrder[] {
+export function toOrders(symbol: string, orders: LighterOrder[]): Order[] {
   return orders.map((order) => lighterOrderToAster(symbol, order));
 }
 
-export function lighterOrderToAster(symbol: string, order: LighterOrder): AsterOrder {
+export function lighterOrderToAster(symbol: string, order: LighterOrder): Order {
   const booleanIsAsk = normalizeBooleanFlag(order.is_ask);
   const normalizedSide = order.side?.toLowerCase();
   const side: OrderSide =
@@ -162,7 +162,7 @@ export function toAccountSnapshot(
   symbol: string,
   details: LighterAccountDetails,
   positions: LighterPosition[] = [],
-  assets: AsterAccountAsset[] = [],
+  assets: AccountAsset[] = [],
   options?: {
     marketSymbol?: string | null;
     marketId?: number | null;
@@ -172,7 +172,7 @@ export function toAccountSnapshot(
     baseAssetId?: number | null;
     quoteAssetId?: number | null;
   }
-): AsterAccountSnapshot {
+): AccountSnapshot {
   const targetSymbol = options?.marketSymbol ?? null;
   const targetMarketId =
     options?.marketId != null && Number.isFinite(Number(options.marketId))
@@ -228,7 +228,7 @@ export function toAccountSnapshot(
   };
 }
 
-function defaultAsset(details: LighterAccountDetails, quoteAsset: string): AsterAccountAsset[] {
+function defaultAsset(details: LighterAccountDetails, quoteAsset: string): AccountAsset[] {
   return [
     {
       asset: quoteAsset || "USDC",
@@ -239,7 +239,7 @@ function defaultAsset(details: LighterAccountDetails, quoteAsset: string): Aster
   ];
 }
 
-function computeTotalWalletBalance(assets: AsterAccountAsset[], details: LighterAccountDetails): string {
+function computeTotalWalletBalance(assets: AccountAsset[], details: LighterAccountDetails): string {
   const sum = assets.reduce((acc, asset) => acc + Number(asset.walletBalance ?? 0), 0);
   if (Number.isFinite(sum) && sum > 0) {
     return sum.toString();
@@ -247,7 +247,7 @@ function computeTotalWalletBalance(assets: AsterAccountAsset[], details: Lighter
   return details.total_asset_value ?? details.collateral ?? "0";
 }
 
-function findAsset(assets: AsterAccountAsset[], target: string | undefined | null): AsterAccountAsset | undefined {
+function findAsset(assets: AccountAsset[], target: string | undefined | null): AccountAsset | undefined {
   if (!target) return undefined;
   const normalizedTarget = target.toUpperCase().split(/[-:/]/)[0];
   return assets.find((asset) => asset.asset.toUpperCase().split(/[-:/]/)[0] === normalizedTarget);
@@ -261,7 +261,7 @@ function normalizeMarketType(value: string | null | undefined): "perp" | "spot" 
   return undefined;
 }
 
-function lighterPositionToAster(symbol: string, position: LighterPosition): AsterAccountPosition {
+function lighterPositionToAster(symbol: string, position: LighterPosition): AccountPosition {
   const sign = position.sign ?? 0;
   const positionSide = sign > 0 ? "LONG" : sign < 0 ? "SHORT" : "BOTH";
   const magnitude = Number(position.position ?? 0);

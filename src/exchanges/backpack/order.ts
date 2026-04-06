@@ -1,4 +1,4 @@
-import type { AsterOrder, CreateOrderParams } from "../types";
+import type { Order, CreateOrderParams } from "../types";
 import type {
   BaseOrderIntent,
   ClosePositionIntent,
@@ -22,7 +22,7 @@ function applyCommonFields(params: CreateOrderParams, intent: BaseOrderIntent): 
   return params;
 }
 
-export async function createLimitOrder(intent: LimitOrderIntent): Promise<AsterOrder> {
+export async function createLimitOrder(intent: LimitOrderIntent): Promise<Order> {
   const params: CreateOrderParams = applyCommonFields(
     {
       symbol: intent.symbol,
@@ -37,7 +37,7 @@ export async function createLimitOrder(intent: LimitOrderIntent): Promise<AsterO
   return intent.adapter.createOrder(params);
 }
 
-export async function createMarketOrder(intent: MarketOrderIntent): Promise<AsterOrder> {
+export async function createMarketOrder(intent: MarketOrderIntent): Promise<Order> {
   const params: CreateOrderParams = applyCommonFields(
     {
       symbol: intent.symbol,
@@ -50,7 +50,7 @@ export async function createMarketOrder(intent: MarketOrderIntent): Promise<Aste
   return intent.adapter.createOrder(params);
 }
 
-export async function createStopOrder(intent: StopOrderIntent): Promise<AsterOrder> {
+export async function createStopOrder(intent: StopOrderIntent): Promise<Order> {
   const params: CreateOrderParams = applyCommonFields(
     {
       symbol: intent.symbol,
@@ -65,11 +65,11 @@ export async function createStopOrder(intent: StopOrderIntent): Promise<AsterOrd
   return intent.adapter.createOrder(params);
 }
 
-export async function createTrailingStopOrder(_intent: TrailingStopOrderIntent): Promise<AsterOrder> {
+export async function createTrailingStopOrder(_intent: TrailingStopOrderIntent): Promise<Order> {
   throw new Error("Backpack exchange does not support trailing stop orders");
 }
 
-export async function createClosePositionOrder(intent: ClosePositionIntent): Promise<AsterOrder> {
+export async function createClosePositionOrder(intent: ClosePositionIntent): Promise<Order> {
   const params: CreateOrderParams = applyCommonFields(
     {
       symbol: intent.symbol,

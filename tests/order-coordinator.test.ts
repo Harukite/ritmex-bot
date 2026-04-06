@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterAll } from "vitest";
 import type { ExchangeAdapter } from "../src/exchanges/adapter";
-import type { AsterOrder } from "../src/exchanges/types";
+import type { Order } from "../src/exchanges/types";
 import type { OrderLockMap, OrderTimerMap, OrderPendingMap } from "../src/core/order-coordinator";
 import {
   deduplicateOrders,
@@ -15,7 +15,7 @@ import {
 const originalTradeExchange = process.env.TRADE_EXCHANGE;
 const originalExchange = process.env.EXCHANGE;
 
-const baseOrder: AsterOrder = {
+const baseOrder: Order = {
   orderId: 1,
   clientOrderId: "client",
   symbol: "BTCUSDT",
@@ -66,7 +66,7 @@ describe("order-coordinator", () => {
     const timers: OrderTimerMap = {};
     const pending: OrderPendingMap = {};
     const log = vi.fn();
-    const openOrders: AsterOrder[] = [
+    const openOrders: Order[] = [
       { ...baseOrder, orderId: 1 },
       { ...baseOrder, orderId: 2 },
     ];

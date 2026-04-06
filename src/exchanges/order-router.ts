@@ -1,5 +1,5 @@
 import type { ExchangeAdapter } from "./adapter";
-import type { AsterOrder } from "./types";
+import type { Order } from "./types";
 import { SUPPORTED_EXCHANGE_IDS, type SupportedExchangeId } from "./create-adapter";
 import type {
   BaseOrderIntent,
@@ -21,11 +21,11 @@ import * as binanceOrders from "./binance/order";
 type ExchangeKey = SupportedExchangeId;
 
 interface ExchangeOrderHandlers {
-  limit(intent: LimitOrderIntent): Promise<AsterOrder>;
-  market(intent: MarketOrderIntent): Promise<AsterOrder>;
-  stop(intent: StopOrderIntent): Promise<AsterOrder>;
-  trailingStop?: (intent: TrailingStopOrderIntent) => Promise<AsterOrder>;
-  close(intent: ClosePositionIntent): Promise<AsterOrder>;
+  limit(intent: LimitOrderIntent): Promise<Order>;
+  market(intent: MarketOrderIntent): Promise<Order>;
+  stop(intent: StopOrderIntent): Promise<Order>;
+  trailingStop?: (intent: TrailingStopOrderIntent) => Promise<Order>;
+  close(intent: ClosePositionIntent): Promise<Order>;
 }
 
 const handlerMap: Record<ExchangeKey, ExchangeOrderHandlers> = {
@@ -117,19 +117,19 @@ function getHandlers(intent: BaseOrderIntent): ExchangeOrderHandlers {
   return handlers;
 }
 
-export function routeLimitOrder(intent: LimitOrderIntent): Promise<AsterOrder> {
+export function routeLimitOrder(intent: LimitOrderIntent): Promise<Order> {
   return getHandlers(intent).limit(intent);
 }
 
-export function routeMarketOrder(intent: MarketOrderIntent): Promise<AsterOrder> {
+export function routeMarketOrder(intent: MarketOrderIntent): Promise<Order> {
   return getHandlers(intent).market(intent);
 }
 
-export function routeStopOrder(intent: StopOrderIntent): Promise<AsterOrder> {
+export function routeStopOrder(intent: StopOrderIntent): Promise<Order> {
   return getHandlers(intent).stop(intent);
 }
 
-export function routeTrailingStopOrder(intent: TrailingStopOrderIntent): Promise<AsterOrder> {
+export function routeTrailingStopOrder(intent: TrailingStopOrderIntent): Promise<Order> {
   const handlers = getHandlers(intent);
   if (!handlers.trailingStop) {
     throw new Error("Trailing stop orders are not supported by the current exchange");
@@ -137,6 +137,6 @@ export function routeTrailingStopOrder(intent: TrailingStopOrderIntent): Promise
   return handlers.trailingStop(intent);
 }
 
-export function routeCloseOrder(intent: ClosePositionIntent): Promise<AsterOrder> {
+export function routeCloseOrder(intent: ClosePositionIntent): Promise<Order> {
   return getHandlers(intent).close(intent);
 }

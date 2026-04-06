@@ -1,5 +1,5 @@
 import NodeWebSocket from "ws";
-import type { AsterDepthLevel } from "../../exchanges/types";
+import type { DepthLevel } from "../../exchanges/types";
 import type { DepthImbalance } from "../../utils/depth";
 
 const WebSocketCtor: typeof globalThis.WebSocket =
@@ -56,14 +56,14 @@ export type BinanceConnectionListener = (state: BinanceConnectionState) => void;
 interface DepthUpdateEvent {
   U: number;
   u: number;
-  bids: AsterDepthLevel[];
-  asks: AsterDepthLevel[];
+  bids: DepthLevel[];
+  asks: DepthLevel[];
 }
 
 interface DepthSnapshotResponse {
   lastUpdateId: number;
-  bids: AsterDepthLevel[];
-  asks: AsterDepthLevel[];
+  bids: DepthLevel[];
+  asks: DepthLevel[];
 }
 
 export class BinanceDepthTracker {
@@ -540,7 +540,7 @@ export class BinanceDepthTracker {
     return true;
   }
 
-  private applyLevels(book: Map<string, number>, levels: AsterDepthLevel[]): void {
+  private applyLevels(book: Map<string, number>, levels: DepthLevel[]): void {
     for (const level of levels) {
       const priceRaw = level?.[0];
       const qtyRaw = level?.[1];
@@ -657,8 +657,8 @@ export class BinanceDepthTracker {
         throw new Error("invalid lastUpdateId");
       }
 
-      const bids = Array.isArray(json.bids) ? (json.bids as AsterDepthLevel[]) : [];
-      const asks = Array.isArray(json.asks) ? (json.asks as AsterDepthLevel[]) : [];
+      const bids = Array.isArray(json.bids) ? (json.bids as DepthLevel[]) : [];
+      const asks = Array.isArray(json.asks) ? (json.asks as DepthLevel[]) : [];
       this.lastRestSyncAt = Date.now();
       this.restConsecutiveFailures = 0;
       this.restLastError = null;
@@ -697,8 +697,8 @@ export class BinanceDepthTracker {
 
       const bidsRaw = Array.isArray(payload.b) ? payload.b : [];
       const asksRaw = Array.isArray(payload.a) ? payload.a : [];
-      const bids = bidsRaw.filter((level): level is AsterDepthLevel => Array.isArray(level)) as AsterDepthLevel[];
-      const asks = asksRaw.filter((level): level is AsterDepthLevel => Array.isArray(level)) as AsterDepthLevel[];
+      const bids = bidsRaw.filter((level): level is DepthLevel => Array.isArray(level)) as DepthLevel[];
+      const asks = asksRaw.filter((level): level is DepthLevel => Array.isArray(level)) as DepthLevel[];
 
       return { U, u, bids, asks };
     } catch {

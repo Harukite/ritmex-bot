@@ -30,7 +30,7 @@ export interface CreateOrderParams {
   tpPrice?: number; // 止盈价格
 }
 
-export interface AsterAccountPosition {
+export interface AccountPosition {
   symbol: string;
   positionAmt: string;
   entryPrice: string;
@@ -254,7 +254,7 @@ export interface GrvtSignedOrder extends GrvtUnsignedOrder {
   signature: GrvtSignature;
 }
 
-export interface AsterAccountAsset {
+export interface AccountAsset {
   asset: string;
   walletBalance: string;
   availableBalance: string;
@@ -272,7 +272,7 @@ export interface AsterAccountAsset {
   marginAvailable?: boolean;
 }
 
-export interface AsterAccountSnapshot {
+export interface AccountSnapshot {
   canTrade: boolean;
   canDeposit: boolean;
   canWithdraw: boolean;
@@ -288,8 +288,8 @@ export interface AsterAccountSnapshot {
   totalCrossUnPnl?: string;
   availableBalance?: string;
   maxWithdrawAmount?: string;
-  positions: AsterAccountPosition[];
-  assets: AsterAccountAsset[];
+  positions: AccountPosition[];
+  assets: AccountAsset[];
   marketType?: "perp" | "spot";
   baseAsset?: string;
   quoteAsset?: string;
@@ -297,22 +297,22 @@ export interface AsterAccountSnapshot {
   quoteAssetId?: number;
 }
 
-export interface AsterDepthLevel extends Array<string> {
+export interface DepthLevel extends Array<string> {
   0: string; // price
   1: string; // quantity
 }
 
-export interface AsterDepth {
+export interface Depth {
   lastUpdateId: number;
-  bids: AsterDepthLevel[];
-  asks: AsterDepthLevel[];
+  bids: DepthLevel[];
+  asks: DepthLevel[];
   eventTime?: number;
   eventType?: string;
   tradeTime?: number;
   symbol?: string;
 }
 
-export interface AsterTicker {
+export interface Ticker {
   symbol: string;
   lastPrice: string;
   openPrice: string;
@@ -409,8 +409,8 @@ export interface AsterSpotDepth {
   lastUpdateId: number;
   E?: number;
   T?: number;
-  bids: AsterDepthLevel[];
-  asks: AsterDepthLevel[];
+  bids: DepthLevel[];
+  asks: DepthLevel[];
 }
 
 export interface AsterSpotTrade {
@@ -583,7 +583,7 @@ export interface AsterSpotUserTrade {
   buyer: boolean;
 }
 
-export interface AsterKline {
+export interface Kline {
   eventType?: string;
   eventTime?: number;
   symbol?: string;
@@ -604,7 +604,7 @@ export interface AsterKline {
   isClosed?: boolean;
 }
 
-export interface AsterOrder {
+export interface Order {
   orderId: number | string;
   clientOrderId: string;
   symbol: string;

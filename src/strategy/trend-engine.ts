@@ -2,11 +2,11 @@ import crypto from "crypto";
 import type { TradingConfig } from "../config";
 import type { ExchangeAdapter } from "../exchanges/adapter";
 import type {
-  AsterAccountSnapshot,
-  AsterOrder,
-  AsterTicker,
-  AsterDepth,
-  AsterKline,
+  AccountSnapshot,
+  Order,
+  Ticker,
+  Depth,
+  Kline,
 } from "../exchanges/types";
 import {
   calcStopLossPrice,
@@ -51,9 +51,9 @@ export interface TrendEngineSnapshot {
   totalTrades: number;
   sessionVolume: number;
   tradeLog: TradeLogEntry[];
-  openOrders: AsterOrder[];
-  depth: AsterDepth | null;
-  ticker: AsterTicker | null;
+  openOrders: Order[];
+  depth: Depth | null;
+  ticker: Ticker | null;
   lastUpdated: number | null;
   lastOpenSignal: OpenOrderPlan;
 }
@@ -68,11 +68,11 @@ type TrendEngineEvent = "update";
 type TrendEngineListener = (snapshot: TrendEngineSnapshot) => void;
 
 export class TrendEngine {
-  private accountSnapshot: AsterAccountSnapshot | null = null;
-  private openOrders: AsterOrder[] = [];
-  private depthSnapshot: AsterDepth | null = null;
-  private tickerSnapshot: AsterTicker | null = null;
-  private klineSnapshot: AsterKline[] = [];
+  private accountSnapshot: AccountSnapshot | null = null;
+  private openOrders: Order[] = [];
+  private depthSnapshot: Depth | null = null;
+  private tickerSnapshot: Ticker | null = null;
+  private klineSnapshot: Kline[] = [];
 
   private readonly locks: OrderLockMap = {};
   private readonly timers: OrderTimerMap = {};
@@ -164,7 +164,7 @@ export class TrendEngine {
   private bootstrap(): void {
     const log: LogHandler = (type, detail) => this.tradeLog.push(type, detail);
 
-    safeSubscribe<AsterAccountSnapshot>(
+    safeSubscribe<AccountSnapshot>(
       this.exchange.watchAccount.bind(this.exchange),
       (snapshot) => {
         this.accountSnapshot = snapshot;
@@ -181,7 +181,7 @@ export class TrendEngine {
       }
     );
 
-    safeSubscribe<AsterOrder[]>(
+    safeSubscribe<Order[]>(
       this.exchange.watchOrders.bind(this.exchange),
       (orders) => {
         this.synchronizeLocks(orders);
@@ -215,7 +215,7 @@ export class TrendEngine {
       }
     );
 
-    safeSubscribe<AsterDepth>(
+    safeSubscribe<Depth>(
       this.exchange.watchDepth.bind(this.exchange, this.config.symbol),
       (depth) => {
         this.depthSnapshot = depth;
@@ -228,7 +228,7 @@ export class TrendEngine {
       }
     );
 
-    safeSubscribe<AsterTicker>(
+    safeSubscribe<Ticker>(
       this.exchange.watchTicker.bind(this.exchange, this.config.symbol),
       (ticker) => {
         this.tickerSnapshot = ticker;
@@ -241,7 +241,7 @@ export class TrendEngine {
       }
     );
 
-    safeSubscribe<AsterKline[]>(
+    safeSubscribe<Kline[]>(
       this.exchange.watchKlines.bind(this.exchange, this.config.symbol, this.config.klineInterval),
       (klines) => {
         this.klineSnapshot = Array.isArray(klines) ? klines : [];
@@ -258,7 +258,7 @@ export class TrendEngine {
     );
   }
 
-  private synchronizeLocks(orders: AsterOrder[] | null | undefined): void {
+  private synchronizeLocks(orders: Order[] | null | undefined): void {
     const list = Array.isArray(orders) ? orders : [];
     Object.keys(this.pending).forEach((type) => {
       const pendingId = this.pending[type];
@@ -834,7 +834,7 @@ export class TrendEngine {
 
   private async tryReplaceStop(
     side: "BUY" | "SELL",
-    currentOrder: AsterOrder,
+    currentOrder: Order,
     nextStopPrice: number,
     lastPrice: number
   ): Promise<void> {

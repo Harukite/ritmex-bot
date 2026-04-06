@@ -9,7 +9,7 @@ import type {
   OrderListener,
   TickerListener,
 } from "../adapter";
-import type { AsterOrder, CreateOrderParams } from "../types";
+import type { Order, CreateOrderParams } from "../types";
 import { extractMessage } from "../../utils/errors";
 import { BinanceGateway, type BinanceGatewayOptions } from "./gateway";
 
@@ -121,7 +121,7 @@ export class BinanceExchangeAdapter implements ExchangeAdapter {
       .catch((error) => this.handleInitError("watchFundingRate", error));
   }
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
     await this.ensureInitialized("createOrder");
     return this.gateway.createOrder(params);
   }
@@ -146,7 +146,7 @@ export class BinanceExchangeAdapter implements ExchangeAdapter {
     return this.gateway.getPrecision(this.symbol);
   }
 
-  async queryOpenOrders(): Promise<AsterOrder[]> {
+  async queryOpenOrders(): Promise<Order[]> {
     await this.ensureInitialized("queryOpenOrders");
     return this.gateway.queryOpenOrders();
   }

@@ -7,12 +7,12 @@ import ccxt, {
 } from "ccxt";
 import { createRequire } from "module";
 import type {
-  AsterAccountAsset,
-  AsterAccountSnapshot,
-  AsterDepth,
-  AsterKline,
-  AsterOrder,
-  AsterTicker,
+  AccountAsset,
+  AccountSnapshot,
+  Depth,
+  Kline,
+  Order,
+  Ticker,
   CreateOrderParams,
   OrderType,
 } from "../types";
@@ -91,8 +91,8 @@ export class ParadexGateway {
   private depthListeners = new Set<DepthListener>();
   private tickerListeners = new Set<TickerListener>();
   private klineListeners = new Map<string, Set<KlineListener>>();
-  private readonly localOrders = new Map<string, AsterOrder>();
-  private lastBalanceSnapshot: AsterAccountSnapshot | null = null;
+  private readonly localOrders = new Map<string, Order>();
+  private lastBalanceSnapshot: AccountSnapshot | null = null;
 
   private accountPollTimer: NodeJS.Timeout | null = null;
   private orderPollTimer: NodeJS.Timeout | null = null;
@@ -546,7 +546,7 @@ export class ParadexGateway {
     this.klinePollTimers.set(interval, setInterval(() => void poll(), this.pollIntervals.klines));
   }
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
     await this.ensureInitialized(params.symbol);
     const symbol = this.marketSymbol;
     const type = this.mapOrderTypeToCcxt(params.type);
@@ -678,7 +678,7 @@ export class ParadexGateway {
     }
   }
 
-  private mapBalanceToAccountSnapshot(balance: Balances): AsterAccountSnapshot {
+  private mapBalanceToAccountSnapshot(balance: Balances): AccountSnapshot {
     const now = Date.now();
 
     const rawPositions = (() => {
@@ -711,7 +711,7 @@ export class ParadexGateway {
       ...Object.keys(total),
     ]);
 
-    const assets: AsterAccountAsset[] = Array.from(assetKeys).map((asset) => ({
+    const assets: AccountAsset[] = Array.from(assetKeys).map((asset) => ({
       asset,
       walletBalance: String(total[asset] ?? 0),
       availableBalance: String(free[asset] ?? 0),
@@ -737,7 +737,7 @@ export class ParadexGateway {
     };
   }
 
-  private mapBalanceToAccountSnapshotFromPositions(rawPositions: any[]): AsterAccountSnapshot {
+  private mapBalanceToAccountSnapshotFromPositions(rawPositions: any[]): AccountSnapshot {
     const now = Date.now();
     const positions = this.normalizePositions(rawPositions, now);
     this.logger("positions", JSON.stringify({ raw: rawPositions, mapped: positions }));
@@ -761,7 +761,7 @@ export class ParadexGateway {
     };
   }
 
-  private normalizePositions(rawPositions: any[], now: number): AsterAccountSnapshot["positions"] {
+  private normalizePositions(rawPositions: any[], now: number): AccountSnapshot["positions"] {
     return rawPositions
       .filter((pos) => pos)
       .map((pos: any) => {
@@ -807,7 +807,7 @@ export class ParadexGateway {
       });
   }
 
-  private mapOrderToAsterOrder(order: CcxtOrder): AsterOrder {
+  private mapOrderToAsterOrder(order: CcxtOrder): Order {
     const side = (order.side ?? "buy").toUpperCase() as "BUY" | "SELL";
     const mappedType = this.mapCcxtOrderTypeToAster(order.type);
     return {
@@ -830,7 +830,7 @@ export class ParadexGateway {
     };
   }
 
-  private mapOrderBookToDepth(orderbook: CcxtOrderBook): AsterDepth {
+  private mapOrderBookToDepth(orderbook: CcxtOrderBook): Depth {
     return {
       lastUpdateId: orderbook.nonce || Date.now(),
       bids: (orderbook.bids || [])
@@ -843,7 +843,7 @@ export class ParadexGateway {
     };
   }
 
-  private mapTickerToAsterTicker(ticker: CcxtTicker): AsterTicker {
+  private mapTickerToAsterTicker(ticker: CcxtTicker): Ticker {
     return {
       symbol: ticker.symbol,
       lastPrice: ticker.last?.toString() || "0",
@@ -856,7 +856,7 @@ export class ParadexGateway {
     };
   }
 
-  private mapOHLCVToKline(candle: CcxtOhlcv, interval: string): AsterKline {
+  private mapOHLCVToKline(candle: CcxtOhlcv, interval: string): Kline {
     const [timestampRaw, openRaw, highRaw, lowRaw, closeRaw, volumeRaw] = candle;
     const timestamp = typeof timestampRaw === "number" && Number.isFinite(timestampRaw)
       ? timestampRaw
@@ -926,7 +926,7 @@ export class ParadexGateway {
     return base[interval] ?? 60 * 1000;
   }
 
-  private upsertLocalOrder(order: AsterOrder): void {
+  private upsertLocalOrder(order: Order): void {
     const key = String(order.orderId);
     if (this.isOrderClosed(order)) {
       this.localOrders.delete(key);
@@ -944,7 +944,7 @@ export class ParadexGateway {
   }
 
   private updateOrdersFromRemote(open: CcxtOrder[], _closed: CcxtOrder[]): void {
-    const nextOpen = new Map<string, AsterOrder>();
+    const nextOpen = new Map<string, Order>();
 
     for (const order of open) {
       const mapped = this.mapOrderToAsterOrder(order);
@@ -973,7 +973,7 @@ export class ParadexGateway {
     }
   }
 
-  private isOrderClosed(order: AsterOrder): boolean {
+  private isOrderClosed(order: Order): boolean {
     const status = (order.status ?? "").toUpperCase();
     if (
       status.includes("CLOSE") ||

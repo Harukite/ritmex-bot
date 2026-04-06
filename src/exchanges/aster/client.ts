@@ -1,11 +1,11 @@
 import crypto from "crypto";
 import { setInterval, clearInterval, setTimeout, clearTimeout } from "timers";
 import type {
-  AsterAccountPosition,
-  AsterAccountSnapshot,
-  AsterDepth,
-  AsterKline,
-  AsterOrder,
+  AccountPosition,
+  AccountSnapshot,
+  Depth,
+  Kline,
+  Order,
   AsterSpotAccount,
   AsterSpotAggTrade,
   AsterSpotBookTicker,
@@ -18,7 +18,7 @@ import type {
   AsterSpotTicker24h,
   AsterSpotTrade,
   AsterSpotUserTrade,
-  AsterTicker,
+  Ticker,
   AsterFuturesExchangeInfo,
   AsterFuturesSymbolInfo,
   CancelSpotOrderParams,
@@ -244,7 +244,7 @@ export class AsterSpotRestClient {
     };
   }
 
-  async createOrder(params: CreateSpotOrderParams): Promise<AsterOrder> {
+  async createOrder(params: CreateSpotOrderParams): Promise<Order> {
     const response = await this.request<any>({
       path: "/api/v1/order",
       method: "POST",
@@ -255,7 +255,7 @@ export class AsterSpotRestClient {
     return toOrderFromRest(response);
   }
 
-  async cancelOrder(params: CancelSpotOrderParams): Promise<AsterOrder> {
+  async cancelOrder(params: CancelSpotOrderParams): Promise<Order> {
     const response = await this.request<any>({
       path: "/api/v1/order",
       method: "DELETE",
@@ -270,7 +270,7 @@ export class AsterSpotRestClient {
     return toOrderFromRest(response);
   }
 
-  async getOrder(params: QuerySpotOrderParams): Promise<AsterOrder> {
+  async getOrder(params: QuerySpotOrderParams): Promise<Order> {
     const response = await this.request<any>({
       path: "/api/v1/order",
       method: "GET",
@@ -285,7 +285,7 @@ export class AsterSpotRestClient {
     return toOrderFromRest(response);
   }
 
-  async getOpenOrders(params: SpotOpenOrdersParams = {}): Promise<AsterOrder[]> {
+  async getOpenOrders(params: SpotOpenOrdersParams = {}): Promise<Order[]> {
     const response = await this.request<any[]>({
       path: "/api/v1/openOrders",
       method: "GET",
@@ -319,7 +319,7 @@ export class AsterSpotRestClient {
     });
   }
 
-  async getAllOrders(params: SpotAllOrdersParams): Promise<AsterOrder[]> {
+  async getAllOrders(params: SpotAllOrdersParams): Promise<Order[]> {
     const response = await this.request<any[]>({
       path: "/api/v1/allOrders",
       method: "GET",
@@ -549,7 +549,7 @@ export class AsterSpotRestClient {
   }
 }
 
-function toDepth(streamSymbol: string, data: any): AsterDepth {
+function toDepth(streamSymbol: string, data: any): Depth {
   return {
     eventType: data.e,
     eventTime: data.E,
@@ -561,7 +561,7 @@ function toDepth(streamSymbol: string, data: any): AsterDepth {
   };
 }
 
-function toTicker(data: any): AsterTicker {
+function toTicker(data: any): Ticker {
   return {
     eventType: data.e,
     eventTime: data.E,
@@ -584,7 +584,7 @@ function toTicker(data: any): AsterTicker {
   };
 }
 
-function toKline(data: any): AsterKline {
+function toKline(data: any): Kline {
   return {
     eventType: data.e,
     eventTime: data.E,
@@ -607,7 +607,7 @@ function toKline(data: any): AsterKline {
   };
 }
 
-function fromRestKline(entry: any[], interval: string, symbol: string): AsterKline {
+function fromRestKline(entry: any[], interval: string, symbol: string): Kline {
   return {
     eventType: undefined,
     eventTime: undefined,
@@ -628,7 +628,7 @@ function fromRestKline(entry: any[], interval: string, symbol: string): AsterKli
   };
 }
 
-function toOrderFromRest(raw: any): AsterOrder {
+function toOrderFromRest(raw: any): Order {
   return {
     avgPrice: raw.avgPrice ?? "0",
     clientOrderId: raw.clientOrderId ?? "",
@@ -656,7 +656,7 @@ function toOrderFromRest(raw: any): AsterOrder {
   };
 }
 
-function toOrderFromEvent(event: any): AsterOrder {
+function toOrderFromEvent(event: any): Order {
   return {
     avgPrice: event.ap ?? "0",
     clientOrderId: event.c ?? "",
@@ -684,7 +684,7 @@ function toOrderFromEvent(event: any): AsterOrder {
   };
 }
 
-function toPositionFromRisk(raw: any): AsterAccountPosition {
+function toPositionFromRisk(raw: any): AccountPosition {
   const positionSide = String(raw.positionSide ?? raw.ps ?? "BOTH").toUpperCase() as PositionSide;
   return {
     symbol: raw.symbol ?? raw.s ?? "",
@@ -708,16 +708,16 @@ function toPositionFromRisk(raw: any): AsterAccountPosition {
   };
 }
 
-function deepCloneAccount(snapshot: AsterAccountSnapshot | null): AsterAccountSnapshot | null {
+function deepCloneAccount(snapshot: AccountSnapshot | null): AccountSnapshot | null {
   return snapshot ? JSON.parse(JSON.stringify(snapshot)) : null;
 }
 
-function sumUnrealizedProfit(positions: AsterAccountPosition[]): string {
+function sumUnrealizedProfit(positions: AccountPosition[]): string {
   const total = positions.reduce((acc, position) => acc + Number(position.unrealizedProfit ?? 0), 0);
   return total.toFixed(8);
 }
 
-function clonePositions(positions: AsterAccountPosition[]): AsterAccountPosition[] {
+function clonePositions(positions: AccountPosition[]): AccountPosition[] {
   return positions.map((position) => ({
     ...position,
     updateTime: position.updateTime ?? Date.now(),
@@ -763,18 +763,18 @@ export class AsterRestClient {
     this.apiSecret = requireEnv(options.apiSecret ?? process.env.ASTER_API_SECRET, "ASTER_API_SECRET");
   }
 
-  async getAccount(): Promise<AsterAccountSnapshot> {
-    return this.signedRequest<AsterAccountSnapshot>({ path: "/fapi/v2/account", method: "GET", params: {} });
+  async getAccount(): Promise<AccountSnapshot> {
+    return this.signedRequest<AccountSnapshot>({ path: "/fapi/v2/account", method: "GET", params: {} });
   }
 
-  async getOpenOrders(symbol?: string): Promise<AsterOrder[]> {
+  async getOpenOrders(symbol?: string): Promise<Order[]> {
     const params: Record<string, unknown> = {};
     if (symbol) params.symbol = symbol;
     const raw = await this.signedRequest<any[]>({ path: "/fapi/v1/openOrders", method: "GET", params });
     return raw.map(toOrderFromRest);
   }
 
-  async getPositions(symbol?: string): Promise<AsterAccountPosition[]> {
+  async getPositions(symbol?: string): Promise<AccountPosition[]> {
     const params: Record<string, unknown> = {};
     if (symbol) params.symbol = symbol.toUpperCase();
     const raw = await this.signedRequest<any[]>({ path: "/fapi/v2/positionRisk", method: "GET", params });
@@ -800,7 +800,7 @@ export class AsterRestClient {
     }
   }
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
     // Sanitize and normalize params for Aster futures API. Paradex-specific flags
     // like reduceOnly/closePosition on STOP/TRAILING should not leak here.
     const payload: Record<string, unknown> = {};
@@ -830,12 +830,12 @@ export class AsterRestClient {
     return toOrderFromRest(response);
   }
 
-  async cancelOrder(params: { symbol: string; orderId?: number; origClientOrderId?: string }): Promise<AsterOrder> {
+  async cancelOrder(params: { symbol: string; orderId?: number; origClientOrderId?: string }): Promise<Order> {
     const response = await this.signedRequest<any>({ path: "/fapi/v1/order", method: "DELETE", params });
     return toOrderFromRest(response);
   }
 
-  async cancelOrders(params: { symbol: string; orderIdList?: Array<number | string>; origClientOrderIdList?: string[] }): Promise<AsterOrder[]> {
+  async cancelOrders(params: { symbol: string; orderIdList?: Array<number | string>; origClientOrderIdList?: string[] }): Promise<Order[]> {
     const payload: Record<string, unknown> = { symbol: params.symbol };
     if (params.orderIdList?.length) {
       payload.orderIdList = `[${params.orderIdList
@@ -853,7 +853,7 @@ export class AsterRestClient {
     await this.signedRequest({ path: "/fapi/v1/allOpenOrders", method: "DELETE", params });
   }
 
-  async getKlines(symbol: string, interval: string, limit = DEFAULT_KLINE_LIMIT): Promise<AsterKline[]> {
+  async getKlines(symbol: string, interval: string, limit = DEFAULT_KLINE_LIMIT): Promise<Kline[]> {
     const upper = symbol.toUpperCase();
     const url = `${FUTURES_REST_BASE}/fapi/v1/continuousKlines?pair=${upper}&contractType=PERPETUAL&interval=${encodeURIComponent(interval)}&limit=${limit}`;
     let response: Response;
@@ -949,9 +949,9 @@ export class AsterRestClient {
 
 }
 
-type DepthHandler = (depth: AsterDepth) => void;
-type TickerHandler = (ticker: AsterTicker) => void;
-type KlineHandler = (kline: AsterKline) => void;
+type DepthHandler = (depth: Depth) => void;
+type TickerHandler = (ticker: Ticker) => void;
+type KlineHandler = (kline: Kline) => void;
 
 type StreamKind = "depth" | "ticker" | "kline";
 
@@ -1244,7 +1244,7 @@ export class AsterUserStream {
   }
 }
 
-function updateAccountSnapshot(snapshot: AsterAccountSnapshot | null, event: { eventTime: number; payload: AccountUpdatePayload }): AsterAccountSnapshot | null {
+function updateAccountSnapshot(snapshot: AccountSnapshot | null, event: { eventTime: number; payload: AccountUpdatePayload }): AccountSnapshot | null {
   if (!snapshot) return snapshot;
   const next = deepCloneAccount(snapshot);
   if (!next) return snapshot;
@@ -1294,7 +1294,7 @@ function updateAccountSnapshot(snapshot: AsterAccountSnapshot | null, event: { e
   return next;
 }
 
-function mergeOrderSnapshot(map: Map<string, AsterOrder>, order: AsterOrder): void {
+function mergeOrderSnapshot(map: Map<string, Order>, order: Order): void {
   const rawId = order.orderId;
   if (rawId === undefined || rawId === null) return;
   const key = String(rawId);
@@ -1311,18 +1311,18 @@ export class AsterGateway {
   private readonly publicStreams: AsterPublicStreams;
   private readonly userStream: AsterUserStream;
 
-  private accountSnapshot: AsterAccountSnapshot | null = null;
-  private readonly openOrders = new Map<string, AsterOrder>();
+  private accountSnapshot: AccountSnapshot | null = null;
+  private readonly openOrders = new Map<string, Order>();
   private positionSyncTimer: ReturnType<typeof setInterval> | null = null;
   private positionSyncInFlight = false;
 
-  private readonly accountEvent = new SimpleEvent<AsterAccountSnapshot>();
-  private readonly ordersEvent = new SimpleEvent<AsterOrder[]>();
-  private readonly depthEvents = new Map<string, SimpleEvent<AsterDepth>>();
-  private readonly tickerEvents = new Map<string, SimpleEvent<AsterTicker>>();
-  private readonly klineEvents = new Map<string, SimpleEvent<AsterKline[]>>();
+  private readonly accountEvent = new SimpleEvent<AccountSnapshot>();
+  private readonly ordersEvent = new SimpleEvent<Order[]>();
+  private readonly depthEvents = new Map<string, SimpleEvent<Depth>>();
+  private readonly tickerEvents = new Map<string, SimpleEvent<Ticker>>();
+  private readonly klineEvents = new Map<string, SimpleEvent<Kline[]>>();
 
-  private readonly klineStores = new Map<string, AsterKline[]>();
+  private readonly klineStores = new Map<string, Kline[]>();
   private readonly klineRefreshTimers = new Map<string, ReturnType<typeof setInterval>>();
   private readonly klineInitialFetches = new Map<string, Promise<void>>();
   private initialized = false;
@@ -1381,21 +1381,21 @@ export class AsterGateway {
     return this.initializing;
   }
 
-  onAccount(listener: (snapshot: AsterAccountSnapshot) => void): void {
+  onAccount(listener: (snapshot: AccountSnapshot) => void): void {
     this.accountEvent.add(listener);
     if (this.accountSnapshot) listener(this.accountSnapshot);
   }
 
-  onOrders(listener: (orders: AsterOrder[]) => void): void {
+  onOrders(listener: (orders: Order[]) => void): void {
     this.ordersEvent.add(listener);
     listener(Array.from(this.openOrders.values()));
   }
 
-  onDepth(symbol: string, listener: (depth: AsterDepth) => void): void {
+  onDepth(symbol: string, listener: (depth: Depth) => void): void {
     const upper = symbol.toUpperCase();
     let event = this.depthEvents.get(upper);
     if (!event) {
-      event = new SimpleEvent<AsterDepth>();
+      event = new SimpleEvent<Depth>();
       this.depthEvents.set(upper, event);
       this.publicStreams.subscribeDepth(upper, (depth) => {
         event?.emit(depth);
@@ -1404,11 +1404,11 @@ export class AsterGateway {
     event.add(listener);
   }
 
-  onTicker(symbol: string, listener: (ticker: AsterTicker) => void): void {
+  onTicker(symbol: string, listener: (ticker: Ticker) => void): void {
     const upper = symbol.toUpperCase();
     let event = this.tickerEvents.get(upper);
     if (!event) {
-      event = new SimpleEvent<AsterTicker>();
+      event = new SimpleEvent<Ticker>();
       this.tickerEvents.set(upper, event);
       this.publicStreams.subscribeTicker(upper, (ticker) => {
         event?.emit(ticker);
@@ -1417,12 +1417,12 @@ export class AsterGateway {
     event.add(listener);
   }
 
-  onKlines(symbol: string, interval: string, listener: (klines: AsterKline[]) => void): void {
+  onKlines(symbol: string, interval: string, listener: (klines: Kline[]) => void): void {
     const upper = symbol.toUpperCase();
     const key = `${upper}:${interval}`;
     let event = this.klineEvents.get(key);
     if (!event) {
-      event = new SimpleEvent<AsterKline[]>();
+      event = new SimpleEvent<Kline[]>();
       this.klineEvents.set(key, event);
       this.publicStreams.subscribeKline(symbol, interval, (kline) => {
         const storeKey = `${upper}:${interval}`;
@@ -1509,7 +1509,7 @@ export class AsterGateway {
         console.error("[AsterGateway] 刷新持仓失败", positionError);
       }
       const normalizedPositions = clonePositions(positions);
-      const snapshot: AsterAccountSnapshot = {
+      const snapshot: AccountSnapshot = {
         ...account,
         positions: normalizedPositions,
         totalUnrealizedProfit: sumUnrealizedProfit(normalizedPositions),
@@ -1547,7 +1547,7 @@ export class AsterGateway {
       if (!Array.isArray(positions)) return;
       const normalizedPositions = clonePositions(positions);
       if (!this.accountSnapshot) {
-        const snapshot: AsterAccountSnapshot = {
+        const snapshot: AccountSnapshot = {
           canTrade: true,
           canDeposit: true,
           canWithdraw: true,
@@ -1561,7 +1561,7 @@ export class AsterGateway {
         this.accountEvent.emit(snapshot);
         return;
       }
-      const nextSnapshot: AsterAccountSnapshot = {
+      const nextSnapshot: AccountSnapshot = {
         ...this.accountSnapshot,
         positions: normalizedPositions,
         totalUnrealizedProfit: sumUnrealizedProfit(normalizedPositions),
@@ -1576,15 +1576,15 @@ export class AsterGateway {
     }
   }
 
-  getAccountSnapshot(): AsterAccountSnapshot | null {
+  getAccountSnapshot(): AccountSnapshot | null {
     return this.accountSnapshot;
   }
 
-  getOpenOrdersSnapshot(): AsterOrder[] {
+  getOpenOrdersSnapshot(): Order[] {
     return Array.from(this.openOrders.values());
   }
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
     const normalized = await this.normalizeOrderParams(params);
     const order = await this.rest.createOrder(normalized);
     mergeOrderSnapshot(this.openOrders, order);

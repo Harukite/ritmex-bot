@@ -1,30 +1,30 @@
 import type {
-  AsterAccountSnapshot,
-  AsterOrder,
-  AsterDepth,
-  AsterTicker,
-  AsterKline,
+  AccountSnapshot,
+  Order,
+  Depth,
+  Ticker,
+  Kline,
   CreateOrderParams,
 } from "./types";
 
 export interface AccountListener {
-  (snapshot: AsterAccountSnapshot): void;
+  (snapshot: AccountSnapshot): void;
 }
 
 export interface OrderListener {
-  (orders: AsterOrder[]): void;
+  (orders: Order[]): void;
 }
 
 export interface DepthListener {
-  (depth: AsterDepth): void;
+  (depth: Depth): void;
 }
 
 export interface TickerListener {
-  (ticker: AsterTicker): void;
+  (ticker: Ticker): void;
 }
 
 export interface KlineListener {
-  (klines: AsterKline[]): void;
+  (klines: Kline[]): void;
 }
 
 export interface FundingRateSnapshot {
@@ -72,7 +72,7 @@ export interface ExchangeAdapter {
   watchTicker(symbol: string, cb: TickerListener): void;
   watchKlines(symbol: string, interval: string, cb: KlineListener): void;
   watchFundingRate?(symbol: string, cb: FundingRateListener): void;
-  createOrder(params: CreateOrderParams): Promise<AsterOrder>;
+  createOrder(params: CreateOrderParams): Promise<Order>;
   cancelOrder(params: { symbol: string; orderId: number | string }): Promise<void>;
   cancelOrders(params: { symbol: string; orderIdList: Array<number | string> }): Promise<void>;
   cancelAllOrders(params: { symbol: string }): Promise<void>;
@@ -82,8 +82,8 @@ export interface ExchangeAdapter {
   offConnectionEvent?(listener: ConnectionEventListener): void;
   onRestHealthEvent?(listener: RestHealthListener): void;
   offRestHealthEvent?(listener: RestHealthListener): void;
-  queryOpenOrders?(): Promise<AsterOrder[]>;
-  queryAccountSnapshot?(): Promise<AsterAccountSnapshot | null>;
+  queryOpenOrders?(): Promise<Order[]>;
+  queryAccountSnapshot?(): Promise<AccountSnapshot | null>;
   changeMarginMode?(params: { symbol: string; marginMode: "isolated" | "cross" }): Promise<void>;
   forceCancelAllOrders?(): Promise<boolean>;
 }

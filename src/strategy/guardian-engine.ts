@@ -1,6 +1,6 @@
 import type { TradingConfig } from "../config";
 import type { ExchangeAdapter } from "../exchanges/adapter";
-import type { AsterAccountSnapshot, AsterOrder, AsterTicker } from "../exchanges/types";
+import type { AccountSnapshot, Order, Ticker } from "../exchanges/types";
 import {
   calcStopLossPrice,
   calcTrailingActivationPrice,
@@ -30,11 +30,11 @@ export interface GuardianEngineSnapshot {
   unrealized: number;
   targetStopPrice: number | null;
   trailingActivationPrice: number | null;
-  stopOrder: AsterOrder | null;
-  trailingOrder: AsterOrder | null;
+  stopOrder: Order | null;
+  trailingOrder: Order | null;
   requiresStop: boolean;
   tradeLog: TradeLogEntry[];
-  openOrders: AsterOrder[];
+  openOrders: Order[];
   lastUpdated: number | null;
   guardStatus: "idle" | "protecting" | "pending";
 }
@@ -43,9 +43,9 @@ type GuardianEngineEvent = "update";
 type GuardianEngineListener = (snapshot: GuardianEngineSnapshot) => void;
 
 export class GuardianEngine {
-  private accountSnapshot: AsterAccountSnapshot | null = null;
-  private openOrders: AsterOrder[] = [];
-  private tickerSnapshot: AsterTicker | null = null;
+  private accountSnapshot: AccountSnapshot | null = null;
+  private openOrders: Order[] = [];
+  private tickerSnapshot: Ticker | null = null;
 
   private readonly locks: OrderLockMap = {};
   private readonly timers: OrderTimerMap = {};
@@ -101,7 +101,7 @@ export class GuardianEngine {
   private bootstrap(): void {
     const log: LogHandler = (type, detail) => this.tradeLog.push(type, detail);
 
-    safeSubscribe<AsterAccountSnapshot>(
+    safeSubscribe<AccountSnapshot>(
       this.exchange.watchAccount.bind(this.exchange),
       (snapshot) => {
         this.accountSnapshot = snapshot;
@@ -114,7 +114,7 @@ export class GuardianEngine {
       }
     );
 
-    safeSubscribe<AsterOrder[]>(
+    safeSubscribe<Order[]>(
       this.exchange.watchOrders.bind(this.exchange),
       (orders) => {
         this.synchronizeLocks(orders);
@@ -141,7 +141,7 @@ export class GuardianEngine {
       }
     );
 
-    safeSubscribe<AsterTicker>(
+    safeSubscribe<Ticker>(
       this.exchange.watchTicker.bind(this.exchange, this.config.symbol),
       (ticker) => {
         this.tickerSnapshot = ticker;
@@ -155,7 +155,7 @@ export class GuardianEngine {
     );
   }
 
-  private synchronizeLocks(orders: AsterOrder[] | null | undefined): void {
+  private synchronizeLocks(orders: Order[] | null | undefined): void {
     const list = Array.isArray(orders) ? orders : [];
     Object.keys(this.pending).forEach((type) => {
       const pendingId = this.pending[type];
@@ -261,8 +261,8 @@ export class GuardianEngine {
     price: number;
     stopPrice: number;
     activationPrice: number;
-    currentStop?: AsterOrder;
-    currentTrailing?: AsterOrder;
+    currentStop?: Order;
+    currentTrailing?: Order;
   }): Promise<void> {
     const { position, direction, stopSide, price, stopPrice, activationPrice, currentStop, currentTrailing } = params;
 
@@ -416,7 +416,7 @@ export class GuardianEngine {
 
   private async tryReplaceStop(
     side: "BUY" | "SELL",
-    currentOrder: AsterOrder,
+    currentOrder: Order,
     nextStopPrice: number,
     lastPrice: number
   ): Promise<void> {
@@ -559,7 +559,7 @@ export class GuardianEngine {
     }
   }
 
-  private isProtectiveOrder(order: AsterOrder): boolean {
+  private isProtectiveOrder(order: Order): boolean {
     if (order.symbol !== this.config.symbol) {
       return false;
     }
@@ -571,14 +571,14 @@ export class GuardianEngine {
     return type === "STOP_MARKET" || hasStopPrice;
   }
 
-  private findStopOrder(side: "BUY" | "SELL"): AsterOrder | undefined {
+  private findStopOrder(side: "BUY" | "SELL"): Order | undefined {
     return this.openOrders.find((order) => {
       const hasStopPrice = Number.isFinite(Number(order.stopPrice)) && Number(order.stopPrice) > 0;
       return order.side === side && (order.type === "STOP_MARKET" || hasStopPrice);
     });
   }
 
-  private findTrailingOrder(side: "BUY" | "SELL"): AsterOrder | undefined {
+  private findTrailingOrder(side: "BUY" | "SELL"): Order | undefined {
     return this.openOrders.find((order) => order.type === "TRAILING_STOP_MARKET" && order.side === side);
   }
 

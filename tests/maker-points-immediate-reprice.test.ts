@@ -1,33 +1,33 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ExchangeAdapter } from "../src/exchanges/adapter";
-import type { AsterAccountSnapshot, AsterDepth, AsterKline, AsterOrder, AsterTicker } from "../src/exchanges/types";
+import type { AccountSnapshot, Depth, Kline, Order, Ticker } from "../src/exchanges/types";
 import { MakerPointsEngine } from "../src/strategy/maker-points-engine";
 
 class StubAdapter implements ExchangeAdapter {
   id = "standx";
 
-  private depthListeners: Array<(depth: AsterDepth) => void> = [];
+  private depthListeners: Array<(depth: Depth) => void> = [];
 
   supportsTrailingStops(): boolean {
     return false;
   }
 
-  watchAccount(_cb: (snapshot: AsterAccountSnapshot) => void): void {}
-  watchOrders(_cb: (orders: AsterOrder[]) => void): void {}
-  watchTicker(_symbol: string, _cb: (ticker: AsterTicker) => void): void {}
-  watchKlines(_symbol: string, _interval: string, _cb: (klines: AsterKline[]) => void): void {}
+  watchAccount(_cb: (snapshot: AccountSnapshot) => void): void {}
+  watchOrders(_cb: (orders: Order[]) => void): void {}
+  watchTicker(_symbol: string, _cb: (ticker: Ticker) => void): void {}
+  watchKlines(_symbol: string, _interval: string, _cb: (klines: Kline[]) => void): void {}
 
-  watchDepth(_symbol: string, cb: (depth: AsterDepth) => void): void {
+  watchDepth(_symbol: string, cb: (depth: Depth) => void): void {
     this.depthListeners.push(cb);
   }
 
-  emitDepth(depth: AsterDepth): void {
+  emitDepth(depth: Depth): void {
     for (const listener of this.depthListeners) {
       listener(depth);
     }
   }
 
-  async createOrder(): Promise<AsterOrder> {
+  async createOrder(): Promise<Order> {
     throw new Error("not implemented");
   }
 
@@ -35,7 +35,7 @@ class StubAdapter implements ExchangeAdapter {
   async cancelOrders(): Promise<void> {}
   async cancelAllOrders(): Promise<void> {}
 
-  async queryAccountSnapshot(): Promise<AsterAccountSnapshot | null> {
+  async queryAccountSnapshot(): Promise<AccountSnapshot | null> {
     return null;
   }
 }

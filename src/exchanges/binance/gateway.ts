@@ -6,13 +6,13 @@ import axios from "axios";
 import { createHash } from "crypto";
 import NodeWebSocket from "ws";
 import type {
-  AsterAccountAsset,
-  AsterAccountPosition,
-  AsterAccountSnapshot,
-  AsterDepth,
-  AsterKline,
-  AsterOrder,
-  AsterTicker,
+  AccountAsset,
+  AccountPosition,
+  AccountSnapshot,
+  Depth,
+  Kline,
+  Order,
+  Ticker,
   CreateOrderParams,
   OrderType,
   PositionSide,
@@ -225,9 +225,9 @@ export class BinanceGateway {
 
   private readonly accountListeners = new Set<AccountListener>();
   private readonly orderListeners = new Set<OrderListener>();
-  private readonly depthSubs = new Map<string, PublicSubscription<AsterDepth>>();
-  private readonly tickerSubs = new Map<string, PublicSubscription<AsterTicker>>();
-  private readonly klineSubs = new Map<string, PublicSubscription<AsterKline[]>>();
+  private readonly depthSubs = new Map<string, PublicSubscription<Depth>>();
+  private readonly tickerSubs = new Map<string, PublicSubscription<Ticker>>();
+  private readonly klineSubs = new Map<string, PublicSubscription<Kline[]>>();
   private readonly fundingSubs = new Map<string, PublicSubscription<{ symbol: string; fundingRate: number; updateTime: number }>>();
 
   private accountPollTimer: ReturnType<typeof setInterval> | null = null;
@@ -254,15 +254,15 @@ export class BinanceGateway {
     },
   };
 
-  private readonly localOrders = new Map<string, AsterOrder>();
+  private readonly localOrders = new Map<string, Order>();
 
   private readonly spotBalances = new Map<string, { free: number; locked: number }>();
   private readonly perpBalances = new Map<string, { wallet: number; available: number }>();
-  private readonly perpPositions = new Map<string, AsterAccountPosition>();
+  private readonly perpPositions = new Map<string, AccountPosition>();
   private readonly lastMarkPriceBySymbol = new Map<string, number>();
 
-  private lastSpotSnapshot: AsterAccountSnapshot | null = null;
-  private lastPerpSnapshot: AsterAccountSnapshot | null = null;
+  private lastSpotSnapshot: AccountSnapshot | null = null;
+  private lastPerpSnapshot: AccountSnapshot | null = null;
 
   constructor(options: BinanceGatewayOptions) {
     this.apiKey = options.apiKey;
@@ -465,7 +465,7 @@ export class BinanceGateway {
     });
   }
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
     await this.ensureInitialized(params.symbol);
     const market = this.resolveMarket(params.symbol);
     const exchange = this.getExchange(market.kind);
@@ -601,10 +601,10 @@ export class BinanceGateway {
     };
   }
 
-  async queryOpenOrders(): Promise<AsterOrder[]> {
+  async queryOpenOrders(): Promise<Order[]> {
     await this.ensureInitialized(this.defaultSymbol);
     const kinds = this.getPrivateKinds();
-    const result: AsterOrder[] = [];
+    const result: Order[] = [];
     for (const kind of kinds) {
       const exchange = this.getExchange(kind);
       const openOrders = (await exchange.fetchOpenOrders()) as CcxtOrder[];
@@ -619,7 +619,7 @@ export class BinanceGateway {
     return result;
   }
 
-  async queryAccountSnapshot(): Promise<AsterAccountSnapshot | null> {
+  async queryAccountSnapshot(): Promise<AccountSnapshot | null> {
     await this.ensureInitialized(this.defaultSymbol);
     const kinds = this.getPrivateKinds();
     for (const kind of kinds) {
@@ -910,7 +910,7 @@ export class BinanceGateway {
     this.lastPerpSnapshot = this.buildPerpSnapshot();
   }
 
-  private mapSpotExecutionReport(payload: any): AsterOrder | null {
+  private mapSpotExecutionReport(payload: any): Order | null {
     const order = payload;
     const symbolRaw = String(order?.s ?? "").toUpperCase();
     if (!symbolRaw) return null;
@@ -940,7 +940,7 @@ export class BinanceGateway {
     };
   }
 
-  private mapPerpOrderTradeUpdate(payload: any): AsterOrder | null {
+  private mapPerpOrderTradeUpdate(payload: any): Order | null {
     const order = payload?.o;
     if (!order) return null;
     const symbolRaw = String(order?.s ?? "").toUpperCase();
@@ -1111,7 +1111,7 @@ export class BinanceGateway {
     (ws as any).onerror = (event: any) => onError(event?.error ?? event);
   }
 
-  private mapDepthPayload(payload: unknown, market: BinanceMarketRef): AsterDepth | null {
+  private mapDepthPayload(payload: unknown, market: BinanceMarketRef): Depth | null {
     const data = payload as any;
     const bids = Array.isArray(data?.b) ? data.b : [];
     const asks = Array.isArray(data?.a) ? data.a : [];
@@ -1129,7 +1129,7 @@ export class BinanceGateway {
     };
   }
 
-  private mapTickerPayload(payload: unknown, market: BinanceMarketRef): AsterTicker | null {
+  private mapTickerPayload(payload: unknown, market: BinanceMarketRef): Ticker | null {
     const data = payload as any;
     const lastPrice = String(data?.c ?? "");
     if (!lastPrice) return null;
@@ -1156,7 +1156,7 @@ export class BinanceGateway {
     };
   }
 
-  private mapKlinePayload(payload: unknown, interval: string): AsterKline[] | null {
+  private mapKlinePayload(payload: unknown, interval: string): Kline[] | null {
     const data = payload as any;
     const kline = data?.k;
     if (!kline) return null;
@@ -1288,7 +1288,7 @@ export class BinanceGateway {
   }
 
   private async attachPerpPositions(): Promise<void> {
-    const next = new Map<string, AsterAccountPosition>();
+    const next = new Map<string, AccountPosition>();
     try {
       const raw = (await this.perpExchange.fetchPositions()) as any[];
       for (const row of raw ?? []) {
@@ -1325,7 +1325,7 @@ export class BinanceGateway {
   private async fetchAndUpdateOrders(kind: MarketKind): Promise<void> {
     const exchange = this.getExchange(kind);
     const openOrders = (await exchange.fetchOpenOrders()) as CcxtOrder[];
-    const remote = new Map<string, AsterOrder>();
+    const remote = new Map<string, Order>();
     for (const order of openOrders) {
       const market = this.resolveMarketByCcxtSymbol(kind, String(order?.symbol ?? ""));
       const mapped = this.mapCcxtOrder(order, kind, market?.id ?? String(order?.symbol ?? ""));
@@ -1367,7 +1367,7 @@ export class BinanceGateway {
     }
   }
 
-  private upsertOrder(order: AsterOrder, kind: MarketKind, marketId: string): void {
+  private upsertOrder(order: Order, kind: MarketKind, marketId: string): void {
     const id = String(order.orderId);
     const symbol = this.resolveDisplaySymbol(kind, marketId);
     const normalized = { ...order, symbol };
@@ -1402,7 +1402,7 @@ export class BinanceGateway {
     if (changed) this.emitOrders();
   }
 
-  private isOrderActive(order: AsterOrder): boolean {
+  private isOrderActive(order: Order): boolean {
     const status = String(order.status ?? "").toUpperCase();
     if (!status) return true;
     if (status === "FILLED" || status === "CANCELED" || status === "CANCELLED" || status === "REJECTED" || status === "EXPIRED") {
@@ -1412,7 +1412,7 @@ export class BinanceGateway {
     return true;
   }
 
-  private buildCombinedAccountSnapshot(): AsterAccountSnapshot | null {
+  private buildCombinedAccountSnapshot(): AccountSnapshot | null {
     const kinds = this.getPrivateKinds();
     if (kinds.length === 0) return null;
     if (kinds.length === 1) {
@@ -1421,7 +1421,7 @@ export class BinanceGateway {
 
     const spot = this.buildSpotSnapshot();
     const perp = this.buildPerpSnapshot();
-    const perpAssetsTagged: AsterAccountAsset[] = perp.assets.map((asset) => ({
+    const perpAssetsTagged: AccountAsset[] = perp.assets.map((asset) => ({
       ...asset,
       asset: `${asset.asset}0`,
     }));
@@ -1441,8 +1441,8 @@ export class BinanceGateway {
     };
   }
 
-  private buildSpotSnapshot(): AsterAccountSnapshot {
-    const assets: AsterAccountAsset[] = [];
+  private buildSpotSnapshot(): AccountSnapshot {
+    const assets: AccountAsset[] = [];
     let totalWallet = 0;
     const now = Date.now();
     for (const [asset, balance] of this.spotBalances.entries()) {
@@ -1471,9 +1471,9 @@ export class BinanceGateway {
     };
   }
 
-  private buildPerpSnapshot(): AsterAccountSnapshot {
+  private buildPerpSnapshot(): AccountSnapshot {
     const now = Date.now();
-    const assets: AsterAccountAsset[] = [];
+    const assets: AccountAsset[] = [];
     let totalWallet = 0;
     for (const [asset, balance] of this.perpBalances.entries()) {
       totalWallet += balance.wallet;
@@ -1506,7 +1506,7 @@ export class BinanceGateway {
     };
   }
 
-  private mapCcxtOrder(order: CcxtOrder, kind: MarketKind, marketId: string): AsterOrder {
+  private mapCcxtOrder(order: CcxtOrder, kind: MarketKind, marketId: string): Order {
     const symbol = this.resolveDisplaySymbol(kind, marketId);
     const side = String(order.side ?? "buy").toUpperCase() === "SELL" ? "SELL" : "BUY";
     return {

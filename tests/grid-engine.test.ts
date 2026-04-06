@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ExchangeAdapter } from "../src/exchanges/adapter";
 import type {
-  AsterAccountSnapshot,
-  AsterDepth,
-  AsterOrder,
-  AsterTicker,
+  AccountSnapshot,
+  Depth,
+  Order,
+  Ticker,
   CreateOrderParams,
 } from "../src/exchanges/types";
 import type { GridConfig } from "../src/config";
@@ -13,11 +13,11 @@ import { GridEngine } from "../src/strategy/grid-engine";
 class StubAdapter implements ExchangeAdapter {
   id = "aster";
 
-  private accountHandler: ((snapshot: AsterAccountSnapshot) => void) | null = null;
-  private orderHandler: ((orders: AsterOrder[]) => void) | null = null;
-  private depthHandler: ((depth: AsterDepth) => void) | null = null;
-  private tickerHandler: ((ticker: AsterTicker) => void) | null = null;
-  private currentOrders: AsterOrder[] = [];
+  private accountHandler: ((snapshot: AccountSnapshot) => void) | null = null;
+  private orderHandler: ((orders: Order[]) => void) | null = null;
+  private depthHandler: ((depth: Depth) => void) | null = null;
+  private tickerHandler: ((ticker: Ticker) => void) | null = null;
+  private currentOrders: Order[] = [];
 
   public createdOrders: CreateOrderParams[] = [];
   public marketOrders: CreateOrderParams[] = [];
@@ -28,19 +28,19 @@ class StubAdapter implements ExchangeAdapter {
     return false;
   }
 
-  watchAccount(cb: (snapshot: AsterAccountSnapshot) => void): void {
+  watchAccount(cb: (snapshot: AccountSnapshot) => void): void {
     this.accountHandler = cb;
   }
 
-  watchOrders(cb: (orders: AsterOrder[]) => void): void {
+  watchOrders(cb: (orders: Order[]) => void): void {
     this.orderHandler = cb;
   }
 
-  watchDepth(_symbol: string, cb: (depth: AsterDepth) => void): void {
+  watchDepth(_symbol: string, cb: (depth: Depth) => void): void {
     this.depthHandler = cb;
   }
 
-  watchTicker(_symbol: string, cb: (ticker: AsterTicker) => void): void {
+  watchTicker(_symbol: string, cb: (ticker: Ticker) => void): void {
     this.tickerHandler = cb;
   }
 
@@ -48,24 +48,24 @@ class StubAdapter implements ExchangeAdapter {
     // not used in tests
   }
 
-  emitAccount(snapshot: AsterAccountSnapshot): void {
+  emitAccount(snapshot: AccountSnapshot): void {
     this.accountHandler?.(snapshot);
   }
 
-  emitOrders(orders: AsterOrder[]): void {
+  emitOrders(orders: Order[]): void {
     this.orderHandler?.(orders);
   }
 
-  emitDepth(depth: AsterDepth): void {
+  emitDepth(depth: Depth): void {
     this.depthHandler?.(depth);
   }
 
-  emitTicker(ticker: AsterTicker): void {
+  emitTicker(ticker: Ticker): void {
     this.tickerHandler?.(ticker);
   }
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
-    const order: AsterOrder = {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
+    const order: Order = {
       orderId: `${Date.now()}-${Math.random()}`,
       clientOrderId: "test",
       symbol: params.symbol,
@@ -107,7 +107,7 @@ class StubAdapter implements ExchangeAdapter {
   }
 }
 
-function createAccountSnapshot(symbol: string, positionAmt: number): AsterAccountSnapshot {
+function createAccountSnapshot(symbol: string, positionAmt: number): AccountSnapshot {
   return {
     canTrade: true,
     canDeposit: true,
@@ -126,7 +126,7 @@ function createAccountSnapshot(symbol: string, positionAmt: number): AsterAccoun
       },
     ],
     assets: [],
-  } as unknown as AsterAccountSnapshot;
+  } as unknown as AccountSnapshot;
 }
 
 describe("GridEngine", () => {
@@ -296,7 +296,7 @@ describe("GridEngine", () => {
 
     adapter.emitAccount(createAccountSnapshot(baseConfig.symbol, baseConfig.orderSize * 2));
 
-    const reduceOrder: AsterOrder = {
+    const reduceOrder: Order = {
       orderId: "existing-reduce",
       clientOrderId: "existing-reduce",
       symbol: baseConfig.symbol,

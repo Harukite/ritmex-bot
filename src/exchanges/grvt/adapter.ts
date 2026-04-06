@@ -9,7 +9,7 @@ import type {
   OrderListener,
   TickerListener,
 } from "../adapter";
-import type { AsterOrder, CreateOrderParams } from "../types";
+import type { Order, CreateOrderParams } from "../types";
 import { extractMessage } from "../../utils/errors";
 import {
   GrvtGateway,
@@ -123,7 +123,7 @@ export class GrvtExchangeAdapter implements ExchangeAdapter {
     this.gateway.onKlines(this.safeInvoke("watchKlines", cb));
   }
 
-  async createOrder(params: CreateOrderParams): Promise<AsterOrder> {
+  async createOrder(params: CreateOrderParams): Promise<Order> {
     await this.ensureInitialized("createOrder");
     return this.gateway.createOrder(params);
   }

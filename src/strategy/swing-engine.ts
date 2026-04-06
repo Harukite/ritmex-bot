@@ -1,5 +1,5 @@
 import type { ExchangeAdapter } from "../exchanges/adapter";
-import type { AsterAccountSnapshot, AsterDepth, AsterOrder, AsterTicker } from "../exchanges/types";
+import type { AccountSnapshot, Depth, Order, Ticker } from "../exchanges/types";
 import { createTradeLog, type TradeLogEntry } from "../logging/trade-log";
 import { marketClose, placeMarketOrder, placeStopLossOrder, unlockOperating } from "../core/order-coordinator";
 import type { OrderLockMap, OrderPendingMap, OrderTimerMap } from "../core/order-coordinator";
@@ -55,9 +55,9 @@ export interface SwingEngineSnapshot {
   stopLossTarget: number | null;
   stopLossKillSwitch: boolean;
 
-  openOrders: AsterOrder[];
-  depth: AsterDepth | null;
-  ticker: AsterTicker | null;
+  openOrders: Order[];
+  depth: Depth | null;
+  ticker: Ticker | null;
 
   tradeLog: TradeLogEntry[];
   lastUpdated: number | null;
@@ -70,10 +70,10 @@ type SwingListener = (snapshot: SwingEngineSnapshot) => void;
 const EPS = 1e-5;
 
 export class SwingEngine {
-  private accountSnapshot: AsterAccountSnapshot | null = null;
-  private openOrders: AsterOrder[] = [];
-  private depthSnapshot: AsterDepth | null = null;
-  private tickerSnapshot: AsterTicker | null = null;
+  private accountSnapshot: AccountSnapshot | null = null;
+  private openOrders: Order[] = [];
+  private depthSnapshot: Depth | null = null;
+  private tickerSnapshot: Ticker | null = null;
 
   private readonly locks: OrderLockMap = {};
   private readonly timers: OrderTimerMap = {};
@@ -163,7 +163,7 @@ export class SwingEngine {
   private bootstrap(): void {
     const log: LogHandler = (type, detail) => this.tradeLog.push(type, detail);
 
-    safeSubscribe<AsterAccountSnapshot>(
+    safeSubscribe<AccountSnapshot>(
       this.exchange.watchAccount.bind(this.exchange),
       (snapshot) => {
         this.accountSnapshot = snapshot;
@@ -192,7 +192,7 @@ export class SwingEngine {
       }
     );
 
-    safeSubscribe<AsterOrder[]>(
+    safeSubscribe<Order[]>(
       this.exchange.watchOrders.bind(this.exchange),
       (orders) => {
         this.synchronizeLocks(orders);
@@ -214,7 +214,7 @@ export class SwingEngine {
       }
     );
 
-    safeSubscribe<AsterDepth>(
+    safeSubscribe<Depth>(
       this.exchange.watchDepth.bind(this.exchange, this.config.symbol),
       (depth) => {
         this.depthSnapshot = depth;
@@ -227,7 +227,7 @@ export class SwingEngine {
       }
     );
 
-    safeSubscribe<AsterTicker>(
+    safeSubscribe<Ticker>(
       this.exchange.watchTicker.bind(this.exchange, this.config.symbol),
       (ticker) => {
         this.tickerSnapshot = ticker;
@@ -241,7 +241,7 @@ export class SwingEngine {
     );
   }
 
-  private synchronizeLocks(orders: AsterOrder[] | null | undefined): void {
+  private synchronizeLocks(orders: Order[] | null | undefined): void {
     const list = Array.isArray(orders) ? orders : [];
     Object.keys(this.pending).forEach((type) => {
       const pendingId = this.pending[type];

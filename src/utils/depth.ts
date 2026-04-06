@@ -1,9 +1,9 @@
-import type { AsterDepth } from "../exchanges/types";
+import type { Depth } from "../exchanges/types";
 
 export type DepthImbalance = "balanced" | "buy_dominant" | "sell_dominant";
 
 export function computeDepthStats(
-  depth: AsterDepth,
+  depth: Depth,
   levels = 10,
   ratio = 3
 ): {
