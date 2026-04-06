@@ -31,13 +31,15 @@ import type {
   Ticker,
   CreateOrderParams,
   OrderSide,
+} from "../types";
+import type {
   GrvtSignedOrder,
   GrvtSignature,
   GrvtUnsignedOrder,
   GrvtTimeInForce,
   GrvtOrderMetadataInput,
   GrvtTriggerMetadata,
-} from "../types";
+} from "./types";
 
 const DEFAULT_ACCOUNT_POLL_INTERVAL_MS = 5000;
 const DEFAULT_ORDERS_POLL_INTERVAL_MS = 2500;

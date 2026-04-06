@@ -6,6 +6,11 @@ import type {
   Depth,
   Kline,
   Order,
+  Ticker,
+  CreateOrderParams,
+  PositionSide,
+} from "../types";
+import type {
   AsterSpotAccount,
   AsterSpotAggTrade,
   AsterSpotBookTicker,
@@ -18,18 +23,15 @@ import type {
   AsterSpotTicker24h,
   AsterSpotTrade,
   AsterSpotUserTrade,
-  Ticker,
   AsterFuturesExchangeInfo,
   AsterFuturesSymbolInfo,
   CancelSpotOrderParams,
-  CreateOrderParams,
   CreateSpotOrderParams,
-  PositionSide,
   QuerySpotOrderParams,
   SpotAllOrdersParams,
   SpotOpenOrdersParams,
   SpotUserTradesParams,
-} from "../types";
+} from "./types";
 import { decimalsOf } from "../../utils/math";
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
