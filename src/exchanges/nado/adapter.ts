@@ -1,4 +1,3 @@
-import { setTimeout, clearTimeout } from "timers";
 import type {
   AccountListener,
   DepthListener,
@@ -12,6 +11,7 @@ import type {
 import type { Order, CreateOrderParams } from "../types";
 import { extractMessage } from "../../utils/errors";
 import { NadoGateway, type NadoGatewayOptions } from "./gateway";
+import { createSafeInvoke, createInitManager } from "../adapter-utils";
 import type { ChainEnv } from "@nadohq/shared";
 import type { Address } from "viem";
 
@@ -35,11 +35,8 @@ export class NadoExchangeAdapter implements ExchangeAdapter {
 
   private readonly gateway: NadoGateway;
   private readonly symbol: string;
-  private initPromise: Promise<void> | null = null;
-  private readonly initContexts = new Set<string>();
-  private retryTimer: ReturnType<typeof setTimeout> | null = null;
-  private retryDelayMs = 3000;
-  private lastInitErrorAt = 0;
+  private readonly safeInvoke = createSafeInvoke("NadoExchangeAdapter");
+  private readonly init: ReturnType<typeof createInitManager>;
 
   constructor(credentials: NadoCredentials = {}) {
     const signerPrivateKey = credentials.signerPrivateKey ?? process.env.NADO_SIGNER_PRIVATE_KEY;
@@ -79,6 +76,9 @@ export class NadoExchangeAdapter implements ExchangeAdapter {
         (process.env.NADO_STOP_TRIGGER_SOURCE as NadoGatewayOptions["stopTriggerSource"] | undefined),
       logger: (context, error) => this.logError(context, error),
     });
+    this.init = createInitManager("NadoExchangeAdapter", () =>
+      this.gateway.ensureInitialized(this.symbol),
+    );
   }
 
   supportsTrailingStops(): boolean {
@@ -86,52 +86,52 @@ export class NadoExchangeAdapter implements ExchangeAdapter {
   }
 
   watchAccount(cb: AccountListener): void {
-    void this.ensureInitialized("watchAccount");
+    void this.init.ensureInitialized("watchAccount");
     this.gateway.onAccount(this.safeInvoke("watchAccount", cb));
   }
 
   watchOrders(cb: OrderListener): void {
-    void this.ensureInitialized("watchOrders");
+    void this.init.ensureInitialized("watchOrders");
     this.gateway.onOrders(this.safeInvoke("watchOrders", cb));
   }
 
   watchDepth(symbol: string, cb: DepthListener): void {
-    void this.ensureInitialized(`watchDepth:${symbol}`);
+    void this.init.ensureInitialized(`watchDepth:${symbol}`);
     this.gateway.onDepth(symbol, this.safeInvoke("watchDepth", cb));
   }
 
   watchTicker(symbol: string, cb: TickerListener): void {
-    void this.ensureInitialized(`watchTicker:${symbol}`);
+    void this.init.ensureInitialized(`watchTicker:${symbol}`);
     this.gateway.onTicker(symbol, this.safeInvoke("watchTicker", cb));
   }
 
   watchKlines(symbol: string, interval: string, cb: KlineListener): void {
-    void this.ensureInitialized(`watchKlines:${symbol}:${interval}`);
+    void this.init.ensureInitialized(`watchKlines:${symbol}:${interval}`);
     this.gateway.onKlines(symbol, interval, this.safeInvoke("watchKlines", cb));
   }
 
   watchFundingRate(symbol: string, cb: FundingRateListener): void {
-    void this.ensureInitialized(`watchFundingRate:${symbol}`);
+    void this.init.ensureInitialized(`watchFundingRate:${symbol}`);
     this.gateway.onFundingRate(symbol, this.safeInvoke("watchFundingRate", cb));
   }
 
   async createOrder(params: CreateOrderParams): Promise<Order> {
-    await this.ensureInitialized("createOrder");
+    await this.init.ensureInitialized("createOrder");
     return this.gateway.createOrder(params);
   }
 
   async cancelOrder(params: { symbol: string; orderId: number | string }): Promise<void> {
-    await this.ensureInitialized("cancelOrder");
+    await this.init.ensureInitialized("cancelOrder");
     await this.gateway.cancelOrder(params);
   }
 
   async cancelOrders(params: { symbol: string; orderIdList: Array<number | string> }): Promise<void> {
-    await this.ensureInitialized("cancelOrders");
+    await this.init.ensureInitialized("cancelOrders");
     await this.gateway.cancelOrders(params);
   }
 
   async cancelAllOrders(params: { symbol: string }): Promise<void> {
-    await this.ensureInitialized("cancelAllOrders");
+    await this.init.ensureInitialized("cancelAllOrders");
     await this.gateway.cancelAllOrders(params);
   }
 
@@ -142,70 +142,6 @@ export class NadoExchangeAdapter implements ExchangeAdapter {
       this.logError("getPrecision", error);
       return null;
     }
-  }
-
-  private safeInvoke<T extends (...args: any[]) => void>(context: string, cb: T): T {
-    const wrapped = ((...args: any[]) => {
-      try {
-        cb(...args);
-      } catch (error) {
-        console.error(`[NadoExchangeAdapter] ${context} handler failed: ${extractMessage(error)}`);
-      }
-    }) as T;
-    return wrapped;
-  }
-
-  private ensureInitialized(context?: string): Promise<void> {
-    if (!this.initPromise) {
-      this.initContexts.clear();
-      this.initPromise = this.gateway
-        .ensureInitialized(this.symbol)
-        .then((value) => {
-          this.clearRetry();
-          return value;
-        })
-        .catch((error) => {
-          this.handleInitError("initialize", error);
-          this.initPromise = null;
-          this.scheduleRetry();
-          throw error;
-        });
-    }
-
-    if (context && !this.initContexts.has(context)) {
-      this.initContexts.add(context);
-      this.initPromise.catch((error) => {
-        this.handleInitError(context, error);
-        this.scheduleRetry();
-      });
-    }
-
-    return this.initPromise;
-  }
-
-  private scheduleRetry(): void {
-    if (this.retryTimer) return;
-    this.retryTimer = setTimeout(() => {
-      this.retryTimer = null;
-      if (this.initPromise) return;
-      this.retryDelayMs = Math.min(this.retryDelayMs * 2, 60_000);
-      void this.ensureInitialized("retry");
-    }, this.retryDelayMs);
-  }
-
-  private clearRetry(): void {
-    if (this.retryTimer) {
-      clearTimeout(this.retryTimer);
-      this.retryTimer = null;
-    }
-    this.retryDelayMs = 3000;
-  }
-
-  private handleInitError(context: string, error: unknown): void {
-    const now = Date.now();
-    if (now - this.lastInitErrorAt < 5000) return;
-    this.lastInitErrorAt = now;
-    console.error(`[NadoExchangeAdapter] ${context} failed`, error);
   }
 
   private logError(context: string, error: unknown): void {

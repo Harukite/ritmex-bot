@@ -1,4 +1,3 @@
-import { setTimeout, clearTimeout } from "timers";
 import type {
   AccountListener,
   DepthListener,
@@ -11,8 +10,8 @@ import type {
   TickerListener,
 } from "../adapter";
 import type { Order, CreateOrderParams } from "../types";
-import { extractMessage } from "../../utils/errors";
 import { StandxGateway, type StandxGatewayOptions, type ConnectionEventListener, type ConnectionEventType } from "./gateway";
+import { createSafeInvoke, createInitManager } from "../adapter-utils";
 
 export type { ConnectionEventListener, ConnectionEventType };
 
@@ -31,11 +30,8 @@ export class StandxExchangeAdapter implements ExchangeAdapter {
 
   private readonly gateway: StandxGateway;
   private readonly symbol: string;
-  private initPromise: Promise<void> | null = null;
-  private readonly initContexts = new Set<string>();
-  private retryTimer: ReturnType<typeof setTimeout> | null = null;
-  private retryDelayMs = 3000;
-  private lastInitErrorAt = 0;
+  private readonly safeInvoke = createSafeInvoke("StandxExchangeAdapter");
+  private readonly init: ReturnType<typeof createInitManager>;
 
   constructor(credentials: StandxCredentials = {}) {
     const token = credentials.token ?? process.env.STANDX_TOKEN;
@@ -52,6 +48,9 @@ export class StandxExchangeAdapter implements ExchangeAdapter {
       signingKey: credentials.signingKey,
       logger: credentials.logger,
     });
+    this.init = createInitManager("StandxExchangeAdapter", () =>
+      this.gateway.ensureInitialized(this.symbol),
+    );
   }
 
   supportsTrailingStops(): boolean {
@@ -59,52 +58,52 @@ export class StandxExchangeAdapter implements ExchangeAdapter {
   }
 
   watchAccount(cb: AccountListener): void {
-    void this.ensureInitialized("watchAccount");
+    void this.init.ensureInitialized("watchAccount");
     this.gateway.onAccount(this.safeInvoke("watchAccount", cb));
   }
 
   watchOrders(cb: OrderListener): void {
-    void this.ensureInitialized("watchOrders");
+    void this.init.ensureInitialized("watchOrders");
     this.gateway.onOrders(this.safeInvoke("watchOrders", cb));
   }
 
   watchDepth(symbol: string, cb: DepthListener): void {
-    void this.ensureInitialized("watchDepth");
+    void this.init.ensureInitialized("watchDepth");
     this.gateway.onDepth(symbol, this.safeInvoke("watchDepth", cb));
   }
 
   watchTicker(symbol: string, cb: TickerListener): void {
-    void this.ensureInitialized("watchTicker");
+    void this.init.ensureInitialized("watchTicker");
     this.gateway.onTicker(symbol, this.safeInvoke("watchTicker", cb));
   }
 
   watchKlines(symbol: string, interval: string, cb: KlineListener): void {
-    void this.ensureInitialized("watchKlines");
+    void this.init.ensureInitialized("watchKlines");
     this.gateway.onKlines(symbol, interval, this.safeInvoke("watchKlines", cb));
   }
 
   watchFundingRate(symbol: string, cb: FundingRateListener): void {
-    void this.ensureInitialized("watchFundingRate");
+    void this.init.ensureInitialized("watchFundingRate");
     this.gateway.onFundingRate(symbol, this.safeInvoke("watchFundingRate", cb));
   }
 
   async createOrder(params: CreateOrderParams): Promise<Order> {
-    await this.ensureInitialized("createOrder");
+    await this.init.ensureInitialized("createOrder");
     return this.gateway.createOrder(params);
   }
 
   async cancelOrder(params: { symbol: string; orderId: number | string }): Promise<void> {
-    await this.ensureInitialized("cancelOrder");
+    await this.init.ensureInitialized("cancelOrder");
     await this.gateway.cancelOrder(params);
   }
 
   async cancelOrders(params: { symbol: string; orderIdList: Array<number | string> }): Promise<void> {
-    await this.ensureInitialized("cancelOrders");
+    await this.init.ensureInitialized("cancelOrders");
     await this.gateway.cancelOrders(params);
   }
 
   async cancelAllOrders(params: { symbol: string }): Promise<void> {
-    await this.ensureInitialized("cancelAllOrders");
+    await this.init.ensureInitialized("cancelAllOrders");
     await this.gateway.cancelAllOrders(params);
   }
 
@@ -152,17 +151,17 @@ export class StandxExchangeAdapter implements ExchangeAdapter {
    * 用于验证实际挂单情况，防止取消请求丢失
    */
   async queryOpenOrders(): Promise<Order[]> {
-    await this.ensureInitialized("queryOpenOrders");
+    await this.init.ensureInitialized("queryOpenOrders");
     return this.gateway.queryOpenOrders(this.symbol);
   }
 
   async queryAccountSnapshot() {
-    await this.ensureInitialized("queryAccountSnapshot");
+    await this.init.ensureInitialized("queryAccountSnapshot");
     return this.gateway.queryAccountSnapshot();
   }
 
   async changeMarginMode(params: { symbol: string; marginMode: "isolated" | "cross" }): Promise<void> {
-    await this.ensureInitialized("changeMarginMode");
+    await this.init.ensureInitialized("changeMarginMode");
     await this.gateway.changeMarginMode(params.symbol, params.marginMode);
   }
 
@@ -171,69 +170,7 @@ export class StandxExchangeAdapter implements ExchangeAdapter {
    * 会查询当前挂单然后取消，并验证取消成功
    */
   async forceCancelAllOrders(): Promise<boolean> {
-    await this.ensureInitialized("forceCancelAllOrders");
+    await this.init.ensureInitialized("forceCancelAllOrders");
     return this.gateway.forceCancelAllOrders(this.symbol);
-  }
-
-  private safeInvoke<T extends (...args: any[]) => void>(context: string, cb: T): T {
-    const wrapped = ((...args: any[]) => {
-      try {
-        cb(...args);
-      } catch (error) {
-        console.error(`[StandxExchangeAdapter] ${context} handler failed: ${extractMessage(error)}`);
-      }
-    }) as T;
-    return wrapped;
-  }
-
-  private ensureInitialized(context?: string): Promise<void> {
-    if (!this.initPromise) {
-      this.initContexts.clear();
-      this.initPromise = this.gateway
-        .ensureInitialized(this.symbol)
-        .then((value) => {
-          this.clearRetry();
-          return value;
-        })
-        .catch((error) => {
-          this.handleInitError("initialize", error);
-          this.initPromise = null;
-          this.scheduleRetry();
-          throw error;
-        });
-    }
-    if (context && !this.initContexts.has(context)) {
-      this.initContexts.add(context);
-      this.initPromise.catch((error) => {
-        this.handleInitError(context, error);
-        this.scheduleRetry();
-      });
-    }
-    return this.initPromise;
-  }
-
-  private scheduleRetry(): void {
-    if (this.retryTimer) return;
-    this.retryTimer = setTimeout(() => {
-      this.retryTimer = null;
-      if (this.initPromise) return;
-      this.retryDelayMs = Math.min(this.retryDelayMs * 2, 60_000);
-      void this.ensureInitialized("retry");
-    }, this.retryDelayMs);
-  }
-
-  private clearRetry(): void {
-    if (this.retryTimer) {
-      clearTimeout(this.retryTimer);
-      this.retryTimer = null;
-    }
-    this.retryDelayMs = 3000;
-  }
-
-  private handleInitError(context: string, error: unknown): void {
-    const now = Date.now();
-    if (now - this.lastInitErrorAt < 5000) return;
-    this.lastInitErrorAt = now;
-    console.error(`[StandxExchangeAdapter] ${context} failed`, error);
   }
 }

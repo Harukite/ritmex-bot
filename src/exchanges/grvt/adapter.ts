@@ -1,4 +1,3 @@
-import { setTimeout, clearTimeout } from "timers";
 import path from "path";
 import { createRequire } from "module";
 import type {
@@ -10,7 +9,6 @@ import type {
   TickerListener,
 } from "../adapter";
 import type { Order, CreateOrderParams } from "../types";
-import { extractMessage } from "../../utils/errors";
 import {
   GrvtGateway,
   type GrvtEnvironment,
@@ -18,6 +16,7 @@ import {
   type GrvtHostsOverride,
   type GrvtSignatureProvider,
 } from "./gateway";
+import { createSafeInvoke, createInitManager } from "../adapter-utils";
 
 export interface GrvtCredentials {
   cookie?: string;
@@ -40,11 +39,8 @@ export class GrvtExchangeAdapter implements ExchangeAdapter {
   private readonly gateway: GrvtGateway;
   private readonly symbol: string;
   private readonly instrument: string;
-  private initPromise: Promise<void> | null = null;
-  private readonly initContexts = new Set<string>();
-  private retryTimer: ReturnType<typeof setTimeout> | null = null;
-  private retryDelayMs = 3000;
-  private lastInitErrorAt = 0;
+  private readonly safeInvoke = createSafeInvoke("GrvtExchangeAdapter");
+  private readonly init: ReturnType<typeof createInitManager>;
   private klineInterval = "1m";
 
   constructor(credentials: GrvtCredentials = {}) {
@@ -91,6 +87,9 @@ export class GrvtExchangeAdapter implements ExchangeAdapter {
       pollIntervals: credentials.pollIntervals,
       logger: credentials.logger,
     });
+    this.init = createInitManager("GrvtExchangeAdapter", () =>
+      this.gateway.ensureInitialized(this.klineInterval),
+    );
   }
 
   supportsTrailingStops(): boolean {
@@ -98,114 +97,49 @@ export class GrvtExchangeAdapter implements ExchangeAdapter {
   }
 
   watchAccount(cb: AccountListener): void {
-    void this.ensureInitialized("watchAccount");
+    void this.init.ensureInitialized("watchAccount");
     this.gateway.onAccount(this.safeInvoke("watchAccount", cb));
   }
 
   watchOrders(cb: OrderListener): void {
-    void this.ensureInitialized("watchOrders");
+    void this.init.ensureInitialized("watchOrders");
     this.gateway.onOrders(this.safeInvoke("watchOrders", cb));
   }
 
   watchDepth(_symbol: string, cb: DepthListener): void {
-    void this.ensureInitialized("watchDepth");
+    void this.init.ensureInitialized("watchDepth");
     this.gateway.onDepth(this.safeInvoke("watchDepth", cb));
   }
 
   watchTicker(_symbol: string, cb: TickerListener): void {
-    void this.ensureInitialized("watchTicker");
+    void this.init.ensureInitialized("watchTicker");
     this.gateway.onTicker(this.safeInvoke("watchTicker", cb));
   }
 
   watchKlines(_symbol: string, interval: string, cb: KlineListener): void {
     this.klineInterval = interval ?? this.klineInterval;
-    void this.ensureInitialized("watchKlines", this.klineInterval);
+    void this.init.ensureInitialized("watchKlines");
     this.gateway.onKlines(this.safeInvoke("watchKlines", cb));
   }
 
   async createOrder(params: CreateOrderParams): Promise<Order> {
-    await this.ensureInitialized("createOrder");
+    await this.init.ensureInitialized("createOrder");
     return this.gateway.createOrder(params);
   }
 
   async cancelOrder(params: { symbol: string; orderId: number | string }): Promise<void> {
-    await this.ensureInitialized("cancelOrder");
+    await this.init.ensureInitialized("cancelOrder");
     await this.gateway.cancelOrder(params);
   }
 
   async cancelOrders(params: { symbol: string; orderIdList: Array<number | string> }): Promise<void> {
-    await this.ensureInitialized("cancelOrders");
+    await this.init.ensureInitialized("cancelOrders");
     await this.gateway.cancelOrders(params);
   }
 
   async cancelAllOrders(_params: { symbol: string }): Promise<void> {
-    await this.ensureInitialized("cancelAllOrders");
+    await this.init.ensureInitialized("cancelAllOrders");
     await this.gateway.cancelAllOrders();
-  }
-
-  private safeInvoke<T extends (...args: any[]) => void>(context: string, cb: T): T {
-    const wrapped = ((...args: any[]) => {
-      try {
-        cb(...args);
-      } catch (error) {
-        console.error(`[GrvtExchangeAdapter] ${context} handler failed: ${extractMessage(error)}`);
-      }
-    }) as T;
-    return wrapped;
-  }
-
-  private ensureInitialized(context?: string, interval?: string): Promise<void> {
-    if (interval) {
-      this.klineInterval = interval;
-    }
-    if (!this.initPromise) {
-      this.initContexts.clear();
-      this.initPromise = this.gateway
-        .ensureInitialized(this.klineInterval)
-        .then((value) => {
-          this.clearRetry();
-          return value;
-        })
-        .catch((error) => {
-          this.handleInitError("initialize", error);
-          this.initPromise = null;
-          this.scheduleRetry();
-          throw error;
-        });
-    }
-    if (context && !this.initContexts.has(context)) {
-      this.initContexts.add(context);
-      this.initPromise.catch((error) => {
-        this.handleInitError(context, error);
-        this.scheduleRetry();
-      });
-    }
-    return this.initPromise;
-  }
-
-  private scheduleRetry(): void {
-    if (this.retryTimer) return;
-    this.retryTimer = setTimeout(() => {
-      this.retryTimer = null;
-      if (this.initPromise) return;
-      this.retryDelayMs = Math.min(this.retryDelayMs * 2, 60_000);
-      void this.ensureInitialized("retry");
-    }, this.retryDelayMs);
-  }
-
-  private clearRetry(): void {
-    if (this.retryTimer) {
-      clearTimeout(this.retryTimer);
-      this.retryTimer = null;
-    }
-    this.retryDelayMs = 3000;
-  }
-
-  private handleInitError(context: string, error: unknown): void {
-    const now = Date.now();
-    if (now - this.lastInitErrorAt < 5000) return;
-    this.lastInitErrorAt = now;
-    console.error(`[GrvtExchangeAdapter] ${context} failed`, error);
   }
 }
 
