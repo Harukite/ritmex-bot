@@ -1,6 +1,6 @@
 import type { ExchangeAdapter } from "./adapter";
 import { createExchangeAdapter, resolveExchangeId, type SupportedExchangeId } from "./create-adapter";
-import type { AsterCredentials } from "./aster-adapter";
+import type { AsterCredentials } from "./aster/adapter";
 import type { LighterCredentials } from "./lighter/adapter";
 import type { BackpackCredentials } from "./backpack/adapter";
 import type { ParadexCredentials } from "./paradex/adapter";

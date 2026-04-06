@@ -1,7 +1,7 @@
 import type { BasisArbConfig } from "../config";
 import type { ExchangeAdapter, FundingRateSnapshot } from "../exchanges/adapter";
 import type { AccountSnapshot, Depth, AsterSpotBookTicker } from "../exchanges/types";
-import { AsterSpotRestClient, AsterRestClient } from "../exchanges/aster/client";
+import { AsterSpotRestClient, AsterRestClient } from "../exchanges/aster/gateway";
 import { createTradeLog, type TradeLogEntry } from "../logging/trade-log";
 import { StrategyEventEmitter } from "./common/event-emitter";
 import { safeSubscribe, type LogHandler } from "./common/subscriptions";

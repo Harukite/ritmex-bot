@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { AsterSpotRestClient } from "../src/exchanges/aster/client";
+import { AsterSpotRestClient } from "../src/exchanges/aster/gateway";
 
 describe("AsterSpotRestClient", () => {
   const originalFetch = globalThis.fetch;

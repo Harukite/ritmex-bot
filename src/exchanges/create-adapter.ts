@@ -1,5 +1,5 @@
 import type { ExchangeAdapter } from "./adapter";
-import { AsterExchangeAdapter, type AsterCredentials } from "./aster-adapter";
+import { AsterExchangeAdapter, type AsterCredentials } from "./aster/adapter";
 import { GrvtExchangeAdapter, type GrvtCredentials } from "./grvt/adapter";
 import { LighterExchangeAdapter, type LighterCredentials } from "./lighter/adapter";
 import { BackpackExchangeAdapter, type BackpackCredentials } from "./backpack/adapter";

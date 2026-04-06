@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { createExchangeAdapter, resolveExchangeId } from "../src/exchanges/create-adapter";
-import { AsterExchangeAdapter } from "../src/exchanges/aster-adapter";
+import { AsterExchangeAdapter } from "../src/exchanges/aster/adapter";
 import { GrvtExchangeAdapter } from "../src/exchanges/grvt/adapter";
 import { BackpackExchangeAdapter } from "../src/exchanges/backpack/adapter";
 import { ParadexExchangeAdapter } from "../src/exchanges/paradex/adapter";

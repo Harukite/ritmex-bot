@@ -6,10 +6,10 @@ import type {
   KlineListener,
   OrderListener,
   TickerListener,
-} from "./adapter";
-import type { Order, CreateOrderParams, Depth, Ticker, Kline } from "./types";
-import { extractMessage } from "../utils/errors";
-import { AsterGateway } from "./aster/client";
+} from "../adapter";
+import type { Order, CreateOrderParams, Depth, Ticker, Kline } from "../types";
+import { extractMessage } from "../../utils/errors";
+import { AsterGateway } from "./gateway";
 
 export interface AsterCredentials {
   apiKey?: string;
